@@ -801,7 +801,14 @@ def _url_payload_command(n: int) -> str:
 #: rebuild's budget for every caller and is reused for a second on the event loop, so
 #: no gate scans ``apps/`` on its own thread. A miss refuses, and refuses later callers
 #: at once while that listing is still in flight. Re-measured.
-_PACKAGE_LINE_BUDGET = 35_901
+#: Raised by 440, from 35,901, to 36,341, for ``mcp_body_fields``: the owner's list of
+#: third-party MCP message-body fields, judged by the document detectors (the full
+#: credential test, with the code-text pass's ``data:`` payload exemption and pass
+#: 3's document-link, SRI-digest and ELB target-group spans on the entropy guess; a field named for something a
+#: server runs is never a row) under the 256 KiB source-body ceiling, the size refusal's Settings
+#: link, plus its keystone leaf in ``paths_lists``. Nothing is relaxed for any other
+#: field; every non-body argument keeps the full scan. Re-measured.
+_PACKAGE_LINE_BUDGET = 36_341
 
 #: Ceiling on any ONE file in the package. This is what the bound is really for --
 #: a package total says nothing about a single file growing back into a second
