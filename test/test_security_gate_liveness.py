@@ -795,7 +795,16 @@ def _url_payload_command(n: int) -> str:
 #: Raised by 20, from 35,804, to 35,824, for ``StreamRedactor.release_sentence_end`` in
 #: ``text_redaction``: a withheld run that is one plain word ending a sentence can be
 #: committed before the next chunk arrives. No pattern, pass or commit boundary moved.
-_PACKAGE_LINE_BUDGET = 35_824
+#: Raised by 1129, from 35,824, to 36,953, for the self-kill floor's ``git grep``
+#: pager read, in its own owner module ``argv_floor_pager``: the last ``-O`` and its ``--no-``
+#: form, the last ``core.pager`` / ``pager.grep`` from ``-c``, ``--config-env`` and
+#: ``GIT_CONFIG_*`` words, ``GIT_PAGER`` / ``PAGER`` unless ``-P``, an inline alias
+#: chain, ``find -exec``, here-documents fed to a shell, and the floor's own pass
+#: over array assignments under an expansion budget, with candidate caps that
+#: count only values that could carry a pager; the walk's opt-in shell-name
+#: fold for that read; the walk's shared tokenization; and the
+#: facade's type-checker imports of its names. Re-measured.
+_PACKAGE_LINE_BUDGET = 36_953
 
 #: Ceiling on any ONE file in the package. This is what the bound is really for --
 #: a package total says nothing about a single file growing back into a second
