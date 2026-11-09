@@ -801,7 +801,9 @@ def _url_payload_command(n: int) -> str:
 #: rebuild's budget for every caller and is reused for a second on the event loop, so
 #: no gate scans ``apps/`` on its own thread. A miss refuses, and refuses later callers
 #: at once while that listing is still in flight. Re-measured.
-_PACKAGE_LINE_BUDGET = 35_901
+#: Raised by 3, from 35,901, for the ``chat_steering_off.json`` leaf on the read-gate
+#: floor in ``paths_lists`` (per-chat steering switch-offs). Re-measured.
+_PACKAGE_LINE_BUDGET = 35_904
 
 #: Ceiling on any ONE file in the package. This is what the bound is really for --
 #: a package total says nothing about a single file growing back into a second
