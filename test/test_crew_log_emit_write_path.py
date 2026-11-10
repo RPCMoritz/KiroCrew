@@ -216,27 +216,40 @@ def test_a_refused_oversize_write_is_dropped_and_counted_and_named_once(caplog):
     """A refusal is a loss NOW, not a retry, and it is admitted rather than hidden.
 
     A refusal happens before any byte is written and would repeat on every retry, so
-    the entry is dropped at once and counted.
+    the entry is dropped at once and counted, and a ``write/dropped`` marker admits it.
+    The second refusal queues behind the first one's marker, so it lands through a pass:
+    the pass the first refusal starts is held in its batching pause until the drain.
     """
+    emit.reset_caches(limits=WriterLimits(batch_deadline_seconds=20.0))  # flake-ok: not waited
     _open_session()
     before = len(_entries())
     with caplog.at_level(logging.WARNING, logger=emit.logger.name):
         emit.on_tool_called(SESSION, 1, name="x" * (70 * 1024), call_id="tc-big")
         emit.on_tool_called(SESSION, 1, name="y" * (70 * 1024), call_id="tc-big2")
-    assert len(_entries()) == before, "a refused write must not land"
+        assert_drained()
+    landed = [e["type"] for e in _entries()[before:]]
+    assert landed == [
+        "write/dropped",
+        "write/dropped",
+    ], f"a refusal landed or went unadmitted: {landed}"
     assert emit.dropped_writes() == 2, "both losses are counted"
     warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
     # One for the storage failure, one for the loss -- and the SECOND refusal adds
-    # neither, because a failing crew log names itself once rather than per entry.
-    assert len(warnings) == 2, f"expected the failure and the loss once each: {warnings}"
+    # neither, because a failing crew log names itself once rather than per entry --
+    # plus one when the first marker lands and the log is writing again.
+    assert (
+        len(warnings) == 3
+    ), f"expected the failure, the loss and the recovery once each: {warnings}"
     assert any("gave up on" in record.getMessage() for record in warnings)
+    assert any("landing again" in record.getMessage() for record in warnings)
 
 
 def test_a_refused_write_does_not_break_the_next_good_write():
     _open_session()
     emit.on_tool_called(SESSION, 1, name="z" * (70 * 1024), call_id="tc-big")
     emit.on_turn_completed(SESSION, 1, stop_reason="end_turn")
-    assert _body()[-1]["type"] == "turn/completed"
+    assert_drained()
+    assert [e["type"] for e in _body()][-2:] == ["write/dropped", "turn/completed"]
 
 
 def test_a_storage_layer_that_raises_never_breaks_a_caller(monkeypatch):
