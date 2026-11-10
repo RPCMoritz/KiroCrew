@@ -37,6 +37,12 @@ import ErrorNotice from '../../components/ErrorNotice'
 import ProviderLogo, { PROVIDER_LOGO_SLUGS } from './ProviderLogo'
 import type { ConnectionProvider } from './registry'
 import { isGoogleSlug } from './connectionsLinks'
+import { Link } from 'react-router-dom'
+import { settingsPath } from '../../components/settingsPath'
+
+/** The Settings entry of the preview that turns on Crew's own sign-in
+ *  (its id in `settingsRegistry.gen.ts`). */
+const CREW_SIGN_IN_SETTING_ID = 'developer.github-sign-in-by-kiro-crew'
 // The loopback pre-check lives in `utils/loopbackReturnAddress` (shared with
 // the chat banner's relay affordance).
 import { isValidLoopbackReturnAddress, normalizeLoopbackReturnAddress } from '../../utils/loopbackReturnAddress'
@@ -99,6 +105,9 @@ interface ConnectionCardProps {
    *  on the connected row; it never removes an action, because the sign-in runs
    *  on Kiro CLI and its grant is real for Kiro CLI chats. */
   backendLacksOauth?: boolean
+  /** The `needs-configuration` card is waiting for Crew's own sign-in, not for an
+   *  OAuth app: its instruction and its link point at that setting. */
+  needsCrewSignIn?: boolean
   /** True on a connected row while chats run on KAS: a KAS chat signs in once
    *  when the user names the server, so the row says which word to type. */
   signInInChat?: boolean
@@ -160,6 +169,7 @@ const PREREQUISITE_KEYS = {
   'google-sheets': 'pages.connectionsPage.prerequisite_google_sheets',
   'google-docs': 'pages.connectionsPage.prerequisite_google_docs',
   'google-slides': 'pages.connectionsPage.prerequisite_google_slides',
+  slack: 'pages.connectionsPage.prerequisite_slack',
 } as const
 
 /**
@@ -351,6 +361,7 @@ function ConnectionCard({
   grantSharedWith,
   grantSharedUnconfirmed,
   backendLacksOauth = false,
+  needsCrewSignIn = false,
   signInInChat = false,
   crewHeld = false,
   busy,
@@ -894,7 +905,26 @@ function ConnectionCard({
               {/* Not on a Google product row: its OAuth app is the shared part
                   below the rows, and this tip names a Configure button the row
                   does not have. */}
-              {expand && !open && (
+              {needsCrewSignIn && (
+                /* No Connect and no OAuth app step yet: this provider's client
+                   never leaves the vault, so the card can connect only once Crew
+                   does the sign-in. The link opens the switch that turns that on. */
+                <>
+                  <PrerequisiteTip
+                    label={t('pages.connectionsPage.prerequisites_for_provider', { provider: provider.name })}
+                    heading={t('pages.connectionsPage.before_you_connect')}
+                    text={t('pages.connectionsPage.needs_crew_sign_in_help', { provider: provider.name })}
+                  />
+                  <Link
+                    to={settingsPath({ tab: 'developer', sub: 'feature-previews', highlight: CREW_SIGN_IN_SETTING_ID })}
+                    className="inline-flex items-center gap-1.5 rounded-md bg-accent px-2.5 py-1.5 text-[12px] font-medium text-accent-fg hover:opacity-90"
+                  >
+                    <Settings2 className="w-3.5 h-3.5" aria-hidden="true" />
+                    {t('pages.connectionsPage.open_crew_sign_in_setting')}
+                  </Link>
+                </>
+              )}
+              {!needsCrewSignIn && expand && !open && (
                 <PrerequisiteTip
                   label={t('pages.connectionsPage.prerequisites_for_provider', { provider: provider.name })}
                   heading={t('pages.connectionsPage.before_you_connect')}
@@ -905,7 +935,7 @@ function ConnectionCard({
                   which opens in place on this card. Only the owner can save it. */}
               {/* Shown only while closed: once open, the form below is the
                   next step and the name toggle closes the card. */}
-              {expand && !open && oauthPanel !== undefined && (
+              {!needsCrewSignIn && expand && !open && oauthPanel !== undefined && (
                 <Btn
                   primary
                   onClick={expand.onToggle}

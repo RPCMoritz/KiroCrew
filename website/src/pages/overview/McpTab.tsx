@@ -28,7 +28,9 @@ function isToday(epochSecs: number): boolean {
   return new Date(epochSecs * 1000).toDateString() === new Date().toDateString()
 }
 import SortableHeader from '../../components/SortableHeader'
-import { connectionProviderForServer } from '../connections/registry'
+import { connectionProviderForServer, providerOwningRow } from '../connections/registry'
+import { settingsPath } from '../../components/settingsPath'
+import { connectionsOAuthClientEntryId } from '../../components/commandPalette/settingsManual'
 import McpRowSignIn, { type McpSignInTarget } from './McpRowSignIn'
 import { useConnectionsUiEnabled } from '../../hooks/useConnectionsUi'
 
@@ -1255,6 +1257,20 @@ export default function McpTab({ onManagedProviderClick }: McpTabProps = {}) {
                     ) : signInTarget ? (
                       <McpRowSignIn target={signInTarget} serverName={s.name} kasChatNote={s.kasChatSignIn} />
 
+                    ) : s.connectionNeedsApp === true && providerOwningRow(s) ? (
+                      /* No chat can start this sign-in: the entry names no client of
+                         its own, or Crew signs in for it and has no OAuth app yet. The
+                         row says what is missing and links to the provider's card under
+                         Settings → Connections, where the OAuth app is entered. */
+                      <span className="text-warn text-[12px]" data-testid="mcp-sign-in-needs-app">
+                        {i18nT('pages.overview.mcpTab.sign_in_needs_oauth_app', { provider: providerOwningRow(s)!.name })}{' '}
+                        <Link
+                          to={settingsPath({ tab: 'connections', highlight: connectionsOAuthClientEntryId(providerOwningRow(s)!.slug) })}
+                          className="underline hover:text-accent transition-colors"
+                        >
+                          {i18nT('pages.connectionsPage.set_up_provider', { provider: providerOwningRow(s)!.name })}
+                        </Link>
+                      </span>
                     ) : (
                       <span className="text-warn text-[12px]">
                         <Trans

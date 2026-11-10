@@ -27,6 +27,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { act, screen, fireEvent, waitFor, within } from '@testing-library/react'
 
 import type { McpServer } from '../types'
+import { PREVIEW_FLAG_SETTING_IDS } from '../components/commandPalette/settingsSearchCore'
 
 const mcpServers = vi.fn()
 const mcpProbe = vi.fn()
@@ -317,6 +318,29 @@ describe('the provider gallery', () => {
     // Open, the form is the next step: Configure goes, the name toggle closes.
     expect(within(github).queryByRole('button', { name: 'Set up GitHub' })).toBeNull()
     expect(within(github).getByTestId('oauth-app-github')).toBeVisible()
+  })
+
+  // Slack's client never leaves the vault, so only Crew's own sign-in can
+  // present it. While that sign-in is not serving chats the status feed says so
+  // (`needsCrewSignIn`) and the card routes to the setting that turns it on.
+  it('renders Slack without Connect while Crew is not doing the sign-in, routing to the setting', async () => {
+    connectionsStatus.mockResolvedValue({
+      schema_version: 1,
+      connections: [{ slug: 'slack', status: 'not_connected', grantPresent: false, needsCrewSignIn: true }],
+    })
+    mount()
+
+    const slack = await waitFor(() => card('slack'))
+    await waitFor(() => expect(slack).toHaveAttribute('data-state', 'needs-configuration'))
+    expect(within(slack).queryByRole('button', { name: /Connect/ })).not.toBeInTheDocument()
+    expect(within(slack).queryByRole('button', { name: 'Set up Slack' })).not.toBeInTheDocument()
+
+    const open = within(slack).getByRole('link', { name: 'Open the setting' })
+    const href = open.getAttribute('href') ?? ''
+    expect(href.startsWith('/settings/developer/feature-previews')).toBe(true)
+    // The id the Settings registry gives the preview's switch.
+    expect(href).toContain('highlight=developer.github-sign-in-by-kiro-crew')
+    expect(PREVIEW_FLAG_SETTING_IDS.has('developer.github-sign-in-by-kiro-crew')).toBe(true)
   })
 
   it('keeps the one-time-setup explanation behind the warning tip beside Configure, not in a band', async () => {
