@@ -795,7 +795,23 @@ def _url_payload_command(n: int) -> str:
 #: Raised by 20, from 35,804, to 35,824, for ``StreamRedactor.release_sentence_end`` in
 #: ``text_redaction``: a withheld run that is one plain word ending a sentence can be
 #: committed before the next chunk arrives. No pattern, pass or commit boundary moved.
-_PACKAGE_LINE_BUDGET = 35_824
+#: Raised by 378, from 35,824, for the ssh floor's self-host read of a glob verb
+#: (the execute-position reader is its own owner, ``argv_floor_exec``):
+#: a verb glob with a directory part always keeps host matching, a bare glob only
+#: in execute position (``_executed_program_indices`` over
+#: ``argv_rules._split_commands_indexed``), so a bare glob that only sits in a
+#: program's operands, a comment or a ``case`` arm is a filename, not a self-host;
+#: and ``_array_element_indices`` (reusing ``_array_literals`` beside
+#: ``_array_assignments``), so a bare glob inside an array literal
+#: (``files=( s* *.* )``) is an element, not an executed verb; and
+#: ``_substitution_positions``, so a word inside ``$( … )`` or backticks
+#: (``n=$(ls s* *.*)``) belongs to the substitution's own frame; and
+#: ``argv_floor_exec._text_without_data_heredocs``, which reads the one heredoc reader
+#: ``shell_commands.read_commands`` and leaves out of the execute-position read a heredoc
+#: body that is certainly data: a quoted tag, a statement that expands nothing, and a
+#: known reader in a known form in every pipe segment. A literal verb in a body is always
+#: read. Re-measured.
+_PACKAGE_LINE_BUDGET = 36_202
 
 #: Ceiling on any ONE file in the package. This is what the bound is really for --
 #: a package total says nothing about a single file growing back into a second
