@@ -1315,7 +1315,7 @@ def test_the_defaults_are_the_decided_bounds():
 
 
 def test_a_network_server_is_one_declared_with_a_url_and_no_command():
-    from kiro_crew.acp.session_handle_mcp import mcp_network_servers
+    from kiro_crew.acp.session_handle_mcp import mcp_network_servers, mcp_network_urls
 
     spec = {
         "mcpServers": {
@@ -1330,6 +1330,12 @@ def test_a_network_server_is_one_declared_with_a_url_and_no_command():
     ]
     assert mcp_network_servers(spec, wire) == frozenset({"remote", "w"})
     assert mcp_network_servers(None, "garbage") == frozenset()
+    assert mcp_network_urls(spec, wire) == {
+        "remote": "https://mcp.example.com/mcp",
+        "w": "https://w",
+    }
+    # The wire entry wins over the spec's.
+    assert mcp_network_urls(spec, [{"name": "remote", "url": "https://w"}])["remote"] == "https://w"
 
 
 def test_the_bounds_are_settings_the_handle_snapshot_carries():
