@@ -128,7 +128,10 @@ class SharedCrewConfig:
         default=False,
         metadata=_meta(
             "Room Link",
-            "STUB (red commit): the real text and parsing come with the code commit."
+            "Off by default. On: a webhook source mapped to the Kiro Space app may post "
+            "a turn into a session this machine bound for sharing, attributed to the "
+            "person the app names. Delivery to Slack and notifications stays off on "
+            "that path. A value that is not true or false reads as off."
             + SHARED_CREW_NEEDS_PREVIEW_HELP,
             restart=True,
         ),
@@ -170,7 +173,7 @@ CREW_CPU_QUOTA_PERCENT = 2400
 SHARED_CREW_FLAGS = ("admission_enabled", "containment_enabled", "hard_limits")
 #: Flags that widen what can reach this machine. A value that is not a boolean
 #: reads as False, so a typo can only narrow exposure.
-SHARED_CREW_EXPOSURE_FLAGS = ("tailnet_direct", "ssm")
+SHARED_CREW_EXPOSURE_FLAGS = ("tailnet_direct", "ssm", "room")
 
 
 def shared_crew_config_from(raw: object) -> SharedCrewConfig:
