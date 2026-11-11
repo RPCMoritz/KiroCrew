@@ -497,6 +497,28 @@ def _doctor_running_version(port: int, issues: list[str]) -> None:
         issues.append("gateway restart needed (running version differs from on-disk)")
 
 
+def _bundle_version_alignment() -> str:
+    """The ``version_alignment:`` line ``kirocrew doctor --bundle`` puts in ``versions.txt``.
+
+    The same two readings as the ``running:`` row, in the forms of ``kirocrew
+    status``'s ``Version:`` line, with no age: ``/api/health`` carries no start time.
+    """
+    # In-function: a family binds no project module at module scope (the facade rule).
+    from kiro_crew.port_resolution import resolve_client_port
+    from kiro_crew.service import live_target
+
+    port = resolve_client_port(None)
+    running = _running_gateway_version(port)
+    selected = live_target.selected_version()[0]
+    if running is None:
+        return f"unknown (no gateway on port {port} reported its version)"
+    if selected is None:
+        return "unknown (could not read the selected package's version)"
+    if running == selected:
+        return f"aligned ({running})"
+    return f"version_skew: the gateway runs {running}, {selected} is selected"
+
+
 def _doctor_gateway_reachability(dashboard: DashboardBinding, issues: list[str]) -> None:
     """The ``Connectivity`` rows after the kiro-cli one: is the gateway up, and does
     it enforce token auth off loopback."""
