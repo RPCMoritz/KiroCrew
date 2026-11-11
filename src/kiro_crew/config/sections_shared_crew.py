@@ -124,6 +124,15 @@ class SharedCrewConfig:
             restart=True,
         ),
     )
+    room: bool = field(
+        default=False,
+        metadata=_meta(
+            "Room Link",
+            "STUB (red commit): the real text and parsing come with the code commit."
+            + SHARED_CREW_NEEDS_PREVIEW_HELP,
+            restart=True,
+        ),
+    )
     typing_idle_seconds: int = field(
         default=10,
         metadata=_meta(

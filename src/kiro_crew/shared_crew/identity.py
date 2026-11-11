@@ -240,6 +240,11 @@ def relay_principal(
     )
 
 
+def room_principal(user_id: str, display: str = "") -> Principal:
+    """STUB (red commit): returns Unknown so the tests fail on assertions."""
+    return Principal.unknown()
+
+
 def app_principal(app: str) -> Principal:
     """An installed app acting with its own token."""
     return Principal.system(f"{_APP_COMPONENT_PREFIX}{app}")

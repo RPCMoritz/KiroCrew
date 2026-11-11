@@ -527,6 +527,7 @@ class WebhookTokenStore:
             # Rows minted before source routing remain readable and preserve
             # their legacy caller-selected routing behavior.
             "agent": str(entry.get("agent") or ""),
+            "app": "",  # STUB (red commit)
             "enabled": entry.get("enabled", True) is not False,
         }
 
@@ -600,8 +601,8 @@ class WebhookTokenStore:
         write_json_atomic(self.path, data)
 
     def create(
-        self, label: str, require_signature: bool = True, agent: str = ""
-    ) -> tuple[str, str, dict[str, Any]]:
+        self, label: str, require_signature: bool = True, agent: str = "", app: str = ""
+    ) -> tuple[str, str, dict[str, Any]]:  # STUB (red commit): `app` is accepted and ignored
         """Mint a token. Returns ``(raw_secret, signing_secret, public_entry)``.
 
         The raw bearer secret is never persisted and cannot be recovered later.
