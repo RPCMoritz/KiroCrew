@@ -7947,6 +7947,7 @@
         "sign_in_again": "Sign in again",
         "sign_in_again_hint": "Your sign-in is checked first; you are asked to approve again only if it stopped working.",
         "sign_in_again_no_tools_hint": "Signed in. This page can't list this server's tools; calling one in chat is the real check. Sign in again checks the sign-in and asks you to approve only if it stopped working.",
+        "signed_in_no_row_sign_in": "This page can't sign in to this server, because it was not added here. To sign in again, send a chat message that names {{name}}, such as \"Sign in to {{name}}\". To sign in from this page, remove it and add it again with Add Custom.",
         "sign_in_preparing": "Preparing sign-in…",
         "sign_in_authorize": "Authorize {{name}}",
         "sign_in_mint_failed": "Could not start the sign-in. Try again.",

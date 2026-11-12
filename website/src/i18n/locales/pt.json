@@ -17365,6 +17365,7 @@
         "sign_in_again": "Entrar novamente",
         "sign_in_again_hint": "Seu login é verificado primeiro; só será pedida uma nova aprovação se ele tiver parado de funcionar.",
         "sign_in_again_no_tools_hint": "Sessão iniciada. Esta página não consegue listar as ferramentas deste servidor; usar uma no chat é a verificação real. Entrar novamente verifica o login e só pede nova aprovação se ele tiver parado de funcionar.",
+        "signed_in_no_row_sign_in": "Esta página não consegue entrar neste servidor porque ele não foi adicionado aqui. Para entrar novamente, envie no chat uma mensagem que cite {{name}}, por exemplo \"Sign in to {{name}}\". Para entrar por esta página, remova-o e adicione-o de novo com \"Adicionar personalizado\".",
         "sign_in_row_updates_after_probe": "Use \"Probe MCP servers\" acima para atualizar esta linha.",
         "sign_in_timeout": "O login não produziu um link de aprovação a tempo. Tente novamente.",
         "temp_refusal_sealed": "O {{key}}={{path}} declarado foi ignorado porque está dentro da pasta de execução somente leitura. A verificação usou a pasta temporária gerenciada no lugar.",
