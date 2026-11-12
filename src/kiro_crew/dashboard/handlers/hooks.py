@@ -113,12 +113,16 @@ async def _bound_session_gate(
 ) -> tuple[web.Response | None, Principal | None]:
     """Decide a ``hook:ks-session:*`` key: ``(refusal, author)``.
 
-    A key of any other shape is today's behavior and never reaches the registry.
+    The ``hook:ks-session:`` prefix is reserved for every source: a key that has it but
+    is not the exact bound shape is refused, never run as an ordinary key. A key
+    without the prefix is today's behavior and never reaches the registry.
     Only a source the operator mapped to the app may post into a BOUND key, and
     only into a bound one; any other source is refused on a bound key. The author is
     read from the body on this path alone, so no other source can set one.
     """
     if not room_sessions.is_bound_key_shape(session_key):
+        if session_key.startswith(room_sessions.BOUND_KEY_PREFIX):
+            return _bound_refusal("session_key_reserved", "this session key is reserved", 400), None
         return None, None
     is_app = token_app == webhooks.APP_KIRO_SPACE
     if is_app and not room_sessions.room_enabled():
