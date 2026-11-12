@@ -411,6 +411,22 @@ class WebexDispatcher:
                 return
         if not permitted:
             return
+        # A reply answering a bridged approval note is decided here and starts no
+        # turn; a re-entered drain was checked already, a stop is never an answer,
+        # and a message carrying a file is content for a turn, not an answer.
+        from kiro_crew.webex.bridge_reply import consume_bridged_reply
+
+        if (
+            interpret_commands
+            and cmd != "stop"
+            and not inbound.file_urls
+            and await consume_bridged_reply(
+                getattr(self, "dashboard_state", None),
+                inbound,
+                lambda note: self._reply(inbound, note),
+            )
+        ):
+            return
         logger.info(
             "Webex inbound from %s: %d chars",
             email[:3] + "***" if email else "?",
