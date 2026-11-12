@@ -32,6 +32,7 @@ if TYPE_CHECKING:
         _history_key_for,
         _loading_refusal,
         _normalize_slot_key,
+        _read_model_field,
         _rebase_rehydrated_refresh_mark,
         _record_explicit_agent_selection,
         _rehydrate_slot_title,
@@ -303,7 +304,9 @@ async def api_chat_slot_create(request: web.Request) -> web.Response:
                 status=400,
             )
         app_agent_owner = f"{app_agent_owner_raw}/{agent}"
-    model = body.get("model", "")
+    model, model_warning, model_refusal = _read_model_field(body)
+    if model_refusal is not None:
+        return model_refusal
     # Folder membership at BIRTH. Assigning it afterwards (client PATCH) is
     # visibly too late: get_or_create_slot broadcasts the new slot before this
     # handler returns, so the dashboard renders it at the top level for a frame
@@ -1292,6 +1295,8 @@ async def api_chat_slot_create(request: web.Request) -> web.Response:
         created["headroom"] = headroom
     if work_item is not None:
         created["work_item_id"] = work_item.item_id
+    if model_warning:
+        created["warning"] = model_warning
     return web.json_response(created)
 
 
