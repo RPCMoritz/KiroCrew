@@ -18,8 +18,8 @@ from unittest.mock import MagicMock
 import pytest
 from aiohttp import web
 from aiohttp.test_utils import TestClient, TestServer
-from webhooks_api_helpers import _payload, _req
 from webhooks_api_helpers import wired_fixture  # noqa: F401
+from webhooks_api_helpers import _payload, _req
 
 from kiro_crew import webhooks
 from kiro_crew.config import sections_shared_crew
