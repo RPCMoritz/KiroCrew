@@ -218,7 +218,6 @@ from kiro_crew.dashboard.chat_api.prompt_queue import (  # noqa: F401
 from kiro_crew.dashboard.chat_api.resume import (  # noqa: F401
     _hydrate_slot_from_history,
     _live_slot_for_resume,
-    _live_slot_resume_payload,
     _materialise_slot_from_history,
     _normalise_structured_content,
     _redact_history_rows,
@@ -232,6 +231,7 @@ from kiro_crew.dashboard.chat_api.resume_identity import (  # noqa: F401
     _pinned_live_outcome,
 )
 from kiro_crew.dashboard.chat_api.resume_window import (  # noqa: F401
+    _live_slot_resume_payload,
     _reconcile_slot_window,
 )
 from kiro_crew.dashboard.chat_api.session_relaunch import (  # noqa: F401

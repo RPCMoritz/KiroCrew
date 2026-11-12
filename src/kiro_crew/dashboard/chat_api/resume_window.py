@@ -1,4 +1,4 @@
-"""Catching a live slot's in-memory window up with its transcript on disk."""
+"""A live slot's in-memory window: caught up with its transcript on disk, served to a resume."""
 
 from __future__ import annotations
 
@@ -10,9 +10,14 @@ if TYPE_CHECKING:
         DashboardState,
         _attach_variants,
         _ChatSlot,
+        _collapse_wire_rows,
+        _live_child_instance,
+        _prepare_messages,
         _redact_meta_for_role,
         carry_provenance,
+        load_window_off_loop,
         logger,
+        queue_view,
         redact_credentials,
         redact_exfiltration_urls,
         remember_unknown_row_fields,
@@ -142,3 +147,42 @@ async def _reconcile_slot_window(state: DashboardState, slot: "_ChatSlot") -> No
     slot._resumed_count = len(slot.messages)
     slot._disk_window_len = len(slot.messages)
     slot._dirty = False
+
+
+async def _live_slot_resume_payload(state, existing) -> dict:
+    """The resume endpoint's dedup body: the already-open slot's live window."""
+    # The live slot a resume resolves to can be a restored sidebar row, under a
+    # name the per-slot route's own lookup did not match (``dashboard:<key>``):
+    # its window loads here, with the read off the loop, before anything reads it.
+    await load_window_off_loop(existing)
+    await _reconcile_slot_window(state, existing)
+    window = _collapse_wire_rows(existing.messages)
+    total = len(window)
+    recent = window[-200:] if total > 200 else window
+    next_before = (getattr(existing, "_disk_older_count", 0) or 0) + (total - len(recent))
+    # The page slot detail serves: none of the rows the tab's display floor hides.
+    from kiro_crew.dashboard.display_floor import clip_page_off_loop
+
+    recent, next_before, floor_reached = await clip_page_off_loop(
+        state.conversation_log, slot_history_key(existing), recent, next_before
+    )
+    prepared = _prepare_messages(
+        recent,
+        existing.running,
+        live_child=_live_child_instance(state, existing),
+        workspace=existing.workspace,
+    )
+    return {
+        "ok": True,
+        "key": existing.key,
+        "history_key": slot_history_key(existing),
+        "messages": prepared,
+        "queue": queue_view(existing._queue),
+        "total": total,
+        "has_more": next_before > 0 and not floor_reached,
+        "next_before": next_before,
+        "memory_mode": existing.memory_mode,
+        "mode": existing.mode,
+        "surface": existing.mode,
+        "folder_id": existing.folder_id,
+    }

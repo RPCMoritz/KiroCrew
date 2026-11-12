@@ -653,7 +653,6 @@ _BASE_SURFACE: dict[str, tuple[tuple[str, str, str], ...]] = {
             "async function",
             "(state, request_app: 'str', history_key: 'str', name: 'str', caller_label: 'str' = '') -> \"'ResumeOutcome | None'\"",
         ),
-        ("_live_slot_resume_payload", "async function", "(state, existing) -> 'dict'"),
         ("_normalise_structured_content", "function", "(value: 'object') -> 'str'"),
         (
             "_redact_history_rows",
@@ -684,6 +683,7 @@ _BASE_SURFACE: dict[str, tuple[tuple[str, str, str], ...]] = {
             "async function",
             "(state: 'DashboardState', slot: \"'_ChatSlot'\") -> 'None'",
         ),
+        ("_live_slot_resume_payload", "async function", "(state, existing) -> 'dict'"),
     ),
     "slot_repair": (
         (

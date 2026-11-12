@@ -32,15 +32,14 @@ if TYPE_CHECKING:
         _attach_variants,
         _await_takeover_ordering_settled,
         _ChatSlot,
-        _collapse_wire_rows,
         _has_validated_effort_marker,
         _history_key_for,
         _live_child_instance,
+        _live_slot_resume_payload,
         _load_restore_cfg,
         _normalize_slot_key,
         _pinned_live_outcome,
         _prepare_messages,
-        _reconcile_slot_window,
         _redact_meta_for_role,
         _restore_model_fields,
         _restored_agent_name,
@@ -57,7 +56,6 @@ if TYPE_CHECKING:
         durable_row_count,
         effective_session_key,
         is_channel_session_key,
-        load_window_off_loop,
         logger,
         members_mod,
         note_crew_log_class,
@@ -142,39 +140,6 @@ async def _live_slot_for_resume(
             )
         return ResumeOutcome(slot=existing, already_live=True)
     return None
-
-
-async def _live_slot_resume_payload(state, existing) -> dict:
-    """The resume endpoint's dedup body: the already-open slot's live window."""
-    # The live slot a resume resolves to can be a restored sidebar row, under a
-    # name the per-slot route's own lookup did not match (``dashboard:<key>``):
-    # its window loads here, with the read off the loop, before anything reads it.
-    await load_window_off_loop(existing)
-    await _reconcile_slot_window(state, existing)
-    window = _collapse_wire_rows(existing.messages)
-    total = len(window)
-    recent = window[-200:] if total > 200 else window
-    prepared = _prepare_messages(
-        recent,
-        existing.running,
-        live_child=_live_child_instance(state, existing),
-        workspace=existing.workspace,
-    )
-    next_before = (getattr(existing, "_disk_older_count", 0) or 0) + (total - len(recent))
-    return {
-        "ok": True,
-        "key": existing.key,
-        "history_key": slot_history_key(existing),
-        "messages": prepared,
-        "queue": queue_view(existing._queue),
-        "total": total,
-        "has_more": next_before > 0,
-        "next_before": next_before,
-        "memory_mode": existing.memory_mode,
-        "mode": existing.mode,
-        "surface": existing.mode,
-        "folder_id": existing.folder_id,
-    }
 
 
 def _normalise_structured_content(value: object) -> str:
@@ -634,15 +599,20 @@ async def api_chat_slot_resume(request: web.Request) -> web.Response:
         return web.json_response(await _live_slot_resume_payload(state, outcome.slot))
     slot, total = outcome.slot, outcome.total
     recent = slot.messages[-200:] if len(slot.messages) > 200 else slot.messages
+    # `total` is the effective hydrated length (durable rows plus a recovered
+    # interruption row when one was appended), so this is the raw index the
+    # next older page starts from.
+    from kiro_crew.dashboard.display_floor import clip_page_off_loop
+
+    recent, next_before, floor_reached = await clip_page_off_loop(
+        state.conversation_log, slot_history_key(slot), recent, total - len(recent)
+    )
     return web.json_response(
         {
             "ok": True,
             "key": slot.key,
             "history_key": slot_history_key(slot),
-            # `total` is the effective hydrated length (durable rows plus a
-            # recovered interruption row when one was appended), so this is
-            # the raw index the next older page starts from.
-            "next_before": total - len(recent),
+            "next_before": next_before,
             "messages": _prepare_messages(
                 recent,
                 slot.running,
@@ -651,7 +621,7 @@ async def api_chat_slot_resume(request: web.Request) -> web.Response:
             ),
             "queue": queue_view(slot._queue),
             "total": total,
-            "has_more": total > len(recent),
+            "has_more": next_before > 0 and not floor_reached,
             "memory_mode": slot.memory_mode,
             "mode": slot.mode,
             "surface": slot.mode,
