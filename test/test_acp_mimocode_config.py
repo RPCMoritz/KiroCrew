@@ -43,6 +43,7 @@ from kiro_crew.providers.mirrors.mimocode import (
     mimocode_tool_id,
     place_mimocode_array,
 )
+from kiro_crew.testing.synthetic_credentials import synth
 
 # ── acp mimocode readback
 # Refusing branches of the read-back, seed and version gate, pinned against
@@ -1965,7 +1966,7 @@ class TestToolIdAndDenyRules:
 def test_a_logged_server_name_is_redacted_and_kept_on_one_line(caplog) -> None:
     """Agent-spec or stub names pass the package's one sink cleaner before logging."""
     caplog.set_level(logging.INFO, logger=mirror_mod.__name__)
-    secret = "AKIA" + "IOSFODNN7EXAMPLE"
+    secret = synth(40, seed=17)
     name = f"srv-{secret}\ninjected"
     projection = _projection([_stdio(name)], refs={name})
     place_mimocode_array(
