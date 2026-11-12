@@ -2154,6 +2154,16 @@ export const SETTINGS_REGISTRY: SettingEntry[] =
     "description": "One Google OAuth client for Gmail, Drive, Calendar, Sheets, Docs and Slides"
   },
   {
+    "id": "connections.remember-mcp-sign-ins-across-sessions",
+    "label": "Remember MCP sign-ins across sessions",
+    "labelKey": "pages.settings.connectionsPanel.remember_sign_ins",
+    "hint": "Off: each new session asks you to sign in to your MCP servers again. On: a sign-in is saved encrypted on this gateway and every session on it reuses it, including those of people you share it with through Shared Crew. Applies to the Kiro Agent backend.",
+    "tab": "connections",
+    "type": "toggle",
+    "occurrence": 1,
+    "configKey": "agent.kas_persist_mcp_sign_in"
+  },
+  {
     "id": "developer.agent-harness-for-worker-chats",
     "label": "Agent Harness for worker chats",
     "labelKey": "pages.developer.featurePreviewsTab.session_harness",
