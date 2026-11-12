@@ -38,6 +38,7 @@ from __future__ import annotations
 import dataclasses
 import logging
 import re
+import unicodedata
 import uuid
 from typing import TYPE_CHECKING, Any
 
@@ -243,6 +244,19 @@ def relay_principal(
     )
 
 
+_LABEL_MAX = 128
+
+
+def clean_label(text: str, limit: int = _LABEL_MAX) -> str:
+    """*text* as one plain line: control, format and separator characters become a space.
+
+    Newlines, bidi overrides and the like cannot reach a transcript or a prompt through a
+    label. Runs of whitespace collapse, the ends are stripped, and the result is capped.
+    """
+    plain = "".join(" " if unicodedata.category(ch)[0] in ("C", "Z") else ch for ch in text)
+    return " ".join(plain.split())[:limit]
+
+
 def room_principal(user_id: str, display: str = "") -> Principal:
     """The principal of a person the Kiro Space app attested on a bound-session post.
 
@@ -255,7 +269,7 @@ def room_principal(user_id: str, display: str = "") -> Principal:
     subject = user_id.strip()
     if not subject:
         return Principal.unknown()
-    label = display.strip()[:128] or "Room collaborator"
+    label = clean_label(display) or "Room collaborator"
     return Principal(
         id=principal_id_for(PROVIDER_ROOM, ROOM_ISSUER, subject),
         kind=PrincipalKind.HUMAN,

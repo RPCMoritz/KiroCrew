@@ -35,6 +35,30 @@ def is_bound_key_shape(key: str) -> bool:
     return bool(_BOUND_KEY_RE.match(key))
 
 
+#: The plain id alphabet an app-attested user id must use (no whitespace, control or
+#: non-ASCII character), at most 128 characters.
+AUTHOR_ID_RE = re.compile(r"[A-Za-z0-9_.:@\-]{1,128}")
+_ATTRIBUTION_PREFIX = "[Message from "
+
+
+def attribute_message(label: str, text: str) -> str:
+    """*text* behind one header line saying another person wrote it, not the owner.
+
+    *label* is already one plain line (``identity.clean_label``); brackets are removed so
+    a name cannot close the header early or open a second one.
+    """
+    who = " ".join(re.sub(r"[\[\]<>]", " ", label).split())
+    header = f"{_ATTRIBUTION_PREFIX}{who}, a collaborator in this shared session. Not the owner.]"
+    return f"{header}\n{text}"
+
+
+def strip_attribution(text: str) -> str:
+    """*text* without the header :func:`attribute_message` put first (for the stored row)."""
+    if text.startswith(_ATTRIBUTION_PREFIX):
+        return text.partition("\n")[2]
+    return text
+
+
 def room_enabled() -> bool:
     """Both Shared Crew's Feature Preview and the room switch are on."""
     try:

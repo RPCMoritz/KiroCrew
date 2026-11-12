@@ -91,9 +91,6 @@ from kiro_crew.tool_gate_busy import hook_gate_busy
 logger = logging.getLogger(__name__)
 
 
-_AUTHOR_ID_MAX = 128
-
-
 def _bound_refusal(code: str, error: str, status: int) -> web.Response:
     webhooks.count_request(webhooks.METRIC_OUTCOME_REJECTED_BODY)
     return web.json_response({"error": error, "code": code}, status=status)
@@ -106,7 +103,7 @@ def _app_author(raw: object) -> Principal | None:
     user_id, name = raw.get("userId"), raw.get("displayName")
     if not isinstance(user_id, str) or not isinstance(name, str):
         return None
-    if not user_id.strip() or len(user_id) > _AUTHOR_ID_MAX:
+    if not room_sessions.AUTHOR_ID_RE.fullmatch(user_id):
         return None
     return room_principal(user_id, name)
 
@@ -508,8 +505,10 @@ async def api_hooks_agent(request: web.Request) -> web.Response:
         )
         return refusal
     if author is not None:
-        # A turn on a bound session is never delivered to Slack or notifications.
+        # A turn on a bound session is never delivered to Slack or notifications, and the
+        # agent is told these are another person's words, not the owner's.
         deliver = False
+        message = room_sessions.attribute_message(author.display.name, message)
 
     mapped_agent = str(source_entry.get("agent") or "") if source_entry else ""
     if mapped_agent and requested_agent and requested_agent != mapped_agent:
@@ -961,7 +960,9 @@ async def _run_hook_inner(
         slot = (getattr(state, "_slots", None) or {}).get(session_key)
         if slot is not None:
             try:
-                slot.append("user", message, "msg msg-u", meta=message_meta)
+                slot.append(
+                    "user", room_sessions.strip_attribution(message), "msg msg-u", meta=message_meta
+                )
             except Exception:
                 logger.warning("bound session row could not be recorded: %s", session_key)
     result_text = ""
