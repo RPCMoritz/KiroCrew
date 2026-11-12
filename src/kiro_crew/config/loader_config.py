@@ -23,7 +23,11 @@ from kiro_crew.agent_sdk.backends import (
     resolve_cc_permission_mode,
 )
 from kiro_crew.agent_sdk.capabilities import MODEL_NAMESPACE_ACP, capabilities_for
-from kiro_crew.config.integration_sections import AppSettingsConfig, AwsConfig
+from kiro_crew.config.integration_sections import (
+    AppSettingsConfig,
+    AwsConfig,
+    TemplateSettingsConfig,
+)
 from kiro_crew.config.loader_agents import resolve_crew_identity
 from kiro_crew.config.loader_builders import (
     _restore_stored_harness_fields,
@@ -458,6 +462,12 @@ class KiroCrewConfig:
         default_factory=dict,
         metadata=_meta("Apps", "Per-app user settings, keyed by the app's manifest name."),
     )
+    templates: dict[str, TemplateSettingsConfig] = field(
+        default_factory=dict,
+        metadata=_meta(
+            "Templates", "Per-template user settings, keyed by the agent template's name."
+        ),
+    )
     auto_update: bool = field(
         default=True,
         metadata=_meta(
@@ -727,6 +737,7 @@ class KiroCrewConfig:
             "memory_stores": {name: asdict(ms_cfg) for name, ms_cfg in self.memory_stores.items()},
             "default_memory_store": self.default_memory_store,
             "apps": {name: asdict(app_cfg) for name, app_cfg in self.apps.items()},
+            "templates": {name: asdict(t_cfg) for name, t_cfg in self.templates.items()},
             "stt": asdict(self.stt),
             "computer_use": asdict(self.computer_use),
             "aws": asdict(self.aws),
@@ -1056,6 +1067,10 @@ class KiroCrewConfig:
         if model_override:
             candidates.append((model_override, "model_override"))
         if agent and agent != "kirocrew":
+            # circular import: loader imports this module.
+            from kiro_crew.config.loader import template_model_pin
+
+            candidates.append((template_model_pin(self, agent), f"templates.{agent}.model"))
             candidates.append((self._resolve_named_agent_model(agent), f"agent spec {agent}"))
         candidates.append((global_model, "agent.model"))
         # A pin says WHAT was picked, never for WHICH harness, so a backend switch
@@ -1472,7 +1487,8 @@ class KiroCrewConfig:
             #   1. model_override — the caller's explicit pick. The dashboard
             #      passes the slot's own model, else the Kiro Crew agent's
             #      configured default (see chat_runner._run_chat).
-            #   2. the bound kiro agent's own pinned model, for a named agent.
+            #   2. the bound kiro agent's model, for a named agent: the user's
+            #      templates.<name>.model, else the template's own pin.
             #      Custom agents MUST resolve here because the ACP
             #      session/set_mode path switches prompt/tools but not the model,
             #      so an unset model makes kiro fall back to cli.json's
