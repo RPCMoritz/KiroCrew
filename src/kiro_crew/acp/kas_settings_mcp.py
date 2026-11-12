@@ -79,12 +79,62 @@ def _unreadable_line(exc: NativeSettingsUnreadable) -> str:
     )
 
 
+#: How a notice names the ``mcp.json`` under ``KIRO_HOME``.
+KIRO_HOME_SOURCE = "the Kiro home's MCP settings"
+
+
+def _kiro_home_servers(notices: list[str]) -> dict[str, Any]:
+    """The servers of ``$KIRO_HOME/settings/mcp.json``, when that is not Crew's global file.
+
+    KAS reads its global ``mcp.json`` under ``KIRO_HOME``
+    (:func:`kiro_crew.config.paths.kiro_home`); Crew's own global path
+    (``agent._KIRO_MCP_JSON``) does not follow that variable. Where the two
+    differ, KAS starts servers that only its own file names, so they are named
+    here for :func:`excluded_whole`. Read only to name servers: it adds
+    exclusions and never lifts one. Empty when ``KIRO_HOME`` is unset or names
+    Crew's own file. A file that cannot be read adds one line to *notices* and
+    names nothing, so the session still starts.
+    """
+    if not os.environ.get("KIRO_HOME"):
+        return {}
+    from kiro_crew import agent as agent_mod
+    from kiro_crew.acp.session_mcp import (
+        NativeSettingsUnreadable,
+        _read_mcp_settings,
+        _unreadable_reason,
+    )
+    from kiro_crew.config.paths import kiro_home
+
+    path = kiro_home() / "settings" / "mcp.json"
+    # ``kiro_home`` resolves links; compare like with like so one file is read once.
+    if path == agent_mod._KIRO_MCP_JSON.resolve():
+        return {}
+    try:
+        settings = _read_mcp_settings(path)
+    except (OSError, ValueError) as exc:
+        notices.append(
+            _unreadable_line(
+                NativeSettingsUnreadable(KIRO_HOME_SOURCE, path, _unreadable_reason(exc))
+            )
+        )
+        logger.warning("KAS: the Kiro home's MCP settings are unreadable; its servers are unnamed")
+        return {}
+    declared = settings.get("mcpServers") if isinstance(settings, dict) else None
+    return dict(declared) if isinstance(declared, dict) else {}
+
+
 def _file_servers(work_dir: str | Path | None, notices: list[str]) -> dict[str, Any]:
     """The mcp.json servers KAS reads, the workspace entry winning a shared name.
 
+    Crew's global file, then the one under ``KIRO_HOME`` when that is another
+    file (:func:`_kiro_home_servers`), then the workspace's.
     Each file that cannot be read adds one line to *notices*, naming it and why.
     """
-    from kiro_crew.acp.session_mcp import NativeSettingsUnreadable, native_settings_sources
+    from kiro_crew.acp.session_mcp import (
+        NATIVE_SOURCE_GLOBAL,
+        NativeSettingsUnreadable,
+        native_settings_sources,
+    )
 
     try:
         sources = native_settings_sources(work_dir)
@@ -98,11 +148,14 @@ def _file_servers(work_dir: str | Path | None, notices: list[str]) -> dict[str, 
         except NativeSettingsUnreadable as global_exc:
             if global_exc.path != exc.path:
                 notices.append(_unreadable_line(global_exc))
-            # KAS cannot use a global file Crew cannot read either; no servers to name.
-            return {}
-    servers: dict[str, Any] = {}
+            # Crew's global file names nothing; the one KAS reads still does.
+            return _kiro_home_servers(notices)
+    servers = _kiro_home_servers(notices)
     for source in sources:  # global first, so the project file overrides
-        servers.update(source.servers)
+        if source.label == NATIVE_SOURCE_GLOBAL:
+            servers = {**source.servers, **servers}
+        else:
+            servers.update(source.servers)
     return servers
 
 
