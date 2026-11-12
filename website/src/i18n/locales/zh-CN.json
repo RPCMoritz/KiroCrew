@@ -11309,6 +11309,7 @@
   "nav": {
     "agent_capabilities": "自定义",
     "mcp_servers": "MCP 服务器",
+    "mcp_servers_waiting_badge": "个服务器等待批准",
     "artifacts": "产物",
     "discover": "发现",
     "library": "库",
@@ -16104,7 +16105,7 @@
       "cancel": "取消",
       "confirm_turn_on": "开启共享",
       "command_changed_hint_command": "它的命令变了。批准更新后会重新共享。",
-      "command_changed_hint_settings": "它的配置变了。批准更新后会重新共享。",
+      "command_changed_hint_settings": "它运行的程序没变，只是环境变量变了。批准更新后会重新共享。",
       "state_new_launch": "已暂停 · 新启动待批准",
       "new_launch_hint": "新增了一种启动方式，已批准的那种没有变。批准更新后会共享它。",
       "enable_all_review_result_marked": "已启用 {{count}} 个。",

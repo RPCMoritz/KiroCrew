@@ -11309,6 +11309,7 @@
   "nav": {
     "agent_capabilities": "맞춤 설정",
     "mcp_servers": "MCP 서버",
+    "mcp_servers_waiting_badge": "개 서버가 승인 대기 중",
     "artifacts": "아티팩트",
     "discover": "탐색",
     "library": "라이브러리",
@@ -16104,7 +16105,7 @@
       "cancel": "취소",
       "confirm_turn_on": "공유 켜기",
       "command_changed_hint_command": "명령이 바뀌었습니다. 업데이트를 승인하면 다시 공유합니다.",
-      "command_changed_hint_settings": "설정값이 바뀌었습니다. 업데이트를 승인하면 다시 공유합니다.",
+      "command_changed_hint_settings": "실행하는 프로그램은 같고 환경 변수만 바뀌었습니다. 업데이트를 승인하면 다시 공유합니다.",
       "state_new_launch": "일시 중지 · 새 실행 승인 대기",
       "new_launch_hint": "새 실행이 추가되었고, 승인된 실행은 바뀌지 않았습니다. 업데이트를 승인하면 공유합니다.",
       "enable_all_review_result_marked": "{{count}}개를 켰습니다.",

@@ -11817,6 +11817,7 @@
   "nav": {
     "agent_capabilities": "Personalizza",
     "mcp_servers": "Server MCP",
+    "mcp_servers_waiting_badge": "server in attesa di approvazione",
     "artifacts": "Artefatti",
     "discover": "Scopri",
     "library": "Libreria",
@@ -16948,7 +16949,7 @@
       "cancel": "Annulla",
       "confirm_turn_on": "Attiva la condivisione",
       "command_changed_hint_command": "Il suo comando è cambiato. Approva l’aggiornamento per condividerlo di nuovo.",
-      "command_changed_hint_settings": "Le sue impostazioni sono cambiate. Approva l’aggiornamento per condividerlo di nuovo.",
+      "command_changed_hint_settings": "Il programma è lo stesso. Sono cambiate solo le variabili d’ambiente. Approva l’aggiornamento per condividerlo di nuovo.",
       "state_new_launch": "In pausa · nuovo avvio da approvare",
       "new_launch_hint": "È stato aggiunto un nuovo avvio e quello approvato non è cambiato. Approva l’aggiornamento per condividerlo.",
       "enable_all_review_result_marked": "{{count}} attivati.",
