@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { FileCode2, MessageSquare, UserPlus, Copy, Trash2, Lock, Plus, X, MoreHorizontal, ToggleLeft, ToggleRight, Star } from 'lucide-react'
 import { useAppDispatch } from '../../store'
@@ -26,6 +26,7 @@ import { queryReadFailed } from '../../utils/queryReadFailed'
 import { i18nT } from '../../i18n/t'
 import UnlistedSpecFiles, { type UnlistedSpec } from './UnlistedSpecFiles'
 import EnrollAsBotDialog from './EnrollAsBotDialog'
+import { TEMPLATE_PARAM } from './agentTemplateLink'
 
 /** One row of `GET /api/agents/templates`: the discovery record plus the two
  *  facts a management page needs — whether it may be edited here, and what
@@ -645,6 +646,22 @@ export default function AgentTemplatesTab() {
     if (!selectedName || !rows.some(r => r.name === selectedName)) setSelectedName(allFiltered[0].name)
   }, [allFiltered, rows, selectedName, dirty])
 
+  // A link that names one agent (`agentTemplateHref`, e.g. a chat's no-tools
+  // notice) opens that agent's page, once per link. Declared after the default
+  // selection above so it wins on the render both run in; never over a dirty
+  // editor, like every other selection change here.
+  const [searchParams] = useSearchParams()
+  const linkedName = searchParams.get(TEMPLATE_PARAM)
+  const openedLink = useRef<string | null>(null)
+  useEffect(() => {
+    if (!linkedName || openedLink.current === linkedName || dirty) return
+    if (!rows.some(r => r.name === linkedName)) return
+    openedLink.current = linkedName
+    setDraft(null); setBaseline(null)
+    setSelectedName(linkedName)
+    openDetail()
+  }, [linkedName, rows, dirty, openDetail])
+
   const groupLabel = (k: GroupKey) => {
     switch (k) {
       case 'custom': return i18nT('pages.overview.agentTemplatesTab.group_mine')
@@ -1063,6 +1080,23 @@ export default function AgentTemplatesTab() {
                           addPlaceholder={i18nT('pages.overview.agentTemplatesTab.add_tool_placeholder')}
                           suggestions={toolSuggestions}
                         />
+                        {/* An agent with no tools can only talk. One click allows all of
+                            them, so nobody has to know a tool's name to get started; the
+                            list above then narrows it. Saved with the Save bar, like any edit. */}
+                        {!detailReadOnly && detailDraft.tools.length === 0 && (
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 mt-2 text-[12px]">
+                            <span className="text-muted">{i18nT('pages.overview.agentTemplatesTab.no_tools_hint')}</span>
+                            <Btn
+                              type="button"
+                              data-testid="tpl-allow-every-tool"
+                              className="inline-flex items-center gap-1.5 border-dashed"
+                              onClick={() => setD({ tools: ['*'] })}
+                            >
+                              <Plus className="lucide-inline" aria-hidden />
+                              {i18nT('pages.overview.agentTemplatesTab.all_tools_add')}
+                            </Btn>
+                          </div>
+                        )}
                         {!detailReadOnly && spawnRefsToAdd.length > 0 && (
                           <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 mt-2 text-[12px]">
                             <span className="text-muted">{i18nT('pages.overview.agentTemplatesTab.spawn_tool_hint')}</span>
