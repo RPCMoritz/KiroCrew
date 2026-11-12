@@ -663,6 +663,9 @@ async def api_hooks_agent(request: web.Request) -> web.Response:
             source="webhook",
             resources=session_key,
         )
+        bound_kwargs: dict[str, Any] = {}
+        if author is not None:
+            bound_kwargs = {"author": author, "message_meta": stamp_principal_author({}, author)}
         task = asyncio.create_task(
             _run_hook_agent(
                 state,
@@ -674,11 +677,7 @@ async def api_hooks_agent(request: web.Request) -> web.Response:
                 timeout_secs,
                 token_id=token_id,
                 execution_context=execution,
-                **(
-                    {"author": author, "message_meta": stamp_principal_author({}, author)}
-                    if author is not None
-                    else {}
-                ),
+                **bound_kwargs,
             )
         )
     except BaseException:
