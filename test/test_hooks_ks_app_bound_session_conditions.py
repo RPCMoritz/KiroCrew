@@ -1,4 +1,4 @@
-"""Security conditions on the bound-session hook path (TALOS review of #35302).
+"""Security conditions on the bound-session hook path.
 
 C3  the app-attested author is cleaned (no control characters, bounded) before it is stamped
     or shown to the agent, and the agent is told the text is another person's message.

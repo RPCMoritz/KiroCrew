@@ -1,4 +1,4 @@
-"""TALOS delta on #35302 (items 2, 3 and 4).
+"""Registry errors, the app mapping routes and the reserved key prefix.
 
 2  an unreadable bound-session registry is 503 for BOTH an app source and a plain source: a
    read error is never read as "unbound".
