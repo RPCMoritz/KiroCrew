@@ -1131,6 +1131,11 @@ jobs:
           # entry: `PR Readiness` is the one required status, so a lane this
           # list omits is a gate that can go red without reddening the PR.
           workflow_specs+=("issue-gate.yml|Issue Gate")
+          # Sensitive Change Review runs on `pull_request_target` for every PR,
+          # whatever its base, so its run executes the default branch's file.
+          # The loop reads it from those runs alone: a PR can add a workflow
+          # that posts a check of the same name, never a run of this kind.
+          workflow_specs+=("sensitive-change-review.yml|Sensitive Change Review")
 
           # True only for a fork PR into a non-default base (see below).
           fork_base_hold=false
@@ -1358,9 +1363,10 @@ jobs:
             fi
           }
 
-          # The monitored workflows whose `pull_request` trigger lists `edited`.
+          # The monitored workflows whose `pull_request` (or, for Sensitive
+          # Change Review, `pull_request_target`) trigger lists `edited`.
           # test_pr_readiness_evaluate.py pins this list to those triggers.
-          edited_lanes=" codex-review.yml issue-gate.yml pr-hygiene.yml "
+          edited_lanes=" codex-review.yml issue-gate.yml pr-hygiene.yml sensitive-change-review.yml "
 
           # `${arr[@]+"${arr[@]}"}` rather than `"${arr[@]}"`: on the transport
           # failure path above the array is EMPTY, and bash < 4.4 (macOS ships
@@ -1600,6 +1606,16 @@ jobs:
                 codeql_source=advanced
               fi
             else
+              src="$pr_runs"
+              # The one lane that is not a `pull_request` run (see its spec).
+              if [ "$file" = "sensitive-change-review.yml" ]; then
+                src="$(gh_head_runs "$REPO" "$SHA" pull_request_target "$pr_runs")" || {
+                  rc=$?
+                  if [ "$rc" -eq 22 ]; then exit 1; fi
+                  transport_failed=true
+                  break
+                }
+              fi
               # Bind the run to this PR by (head repository, head branch), NOT
               # by `.pull_requests`: that array is empty on every fork run, so
               # filtering on it matched nothing and reported each already-green
@@ -1627,8 +1643,7 @@ jobs:
                           and .head_repository.full_name == $head_repo
                           and .head_branch == $head_ref)]
                 | max_by(.id) // empty
-              ' <<<"$pr_runs")"
-              src="$pr_runs"
+              ' <<<"$src")"
             fi
             # Fork approval can start runs out of id order, so the max-id twin gets
             # cancelled; the latest-started same-head run wins (ties: whole seconds).
