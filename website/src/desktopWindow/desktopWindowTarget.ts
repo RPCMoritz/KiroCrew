@@ -44,6 +44,25 @@ export interface DesktopWindowBridge {
   setHitRegions(regions: { x: number; y: number; width: number; height: number }[]): void
   setFocusable(focusable: boolean): void
   onShortcut(cb: (id: string) => void): () => void
+  /** Level 2: the capabilities this window was opened with (declared and approved). */
+  capabilities?: readonly string[]
+  /** Level 2, `localFiles`: show an existing local file in the system file manager. */
+  revealFile?(path: string): void
+  /** Level 2, `localFiles`: open a local image in the system viewer; resolves whether it opened. */
+  openImage?(path: string): Promise<boolean>
+  /** Level 2, `gatewayChoice`: the operator's gateways, or null when refused. */
+  listGateways?(): Promise<DesktopGatewayList | null>
+  /** Level 2, `gatewayChoice`: load this app's windows from gateway *id* (`"self"`: this computer's). */
+  chooseGateway?(id: string): Promise<{ ok: boolean; chosen?: string; showing?: string | null }>
+}
+
+/** What `listGateways()` answers: no host names, ports or credentials. */
+export interface DesktopGatewayList {
+  state: 'ready' | 'inactive' | 'disabled' | 'error'
+  gateways: { id: string; name: string; state: string; connected: boolean; appEnabled: boolean | null }[]
+  /** The stored choice, and the gateway the windows load from now. */
+  chosen: string
+  showing: string
 }
 
 const CALLS = ['ready', 'close', 'open', 'setHitRegions', 'setFocusable', 'onShortcut'] as const

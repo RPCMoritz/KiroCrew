@@ -2931,10 +2931,12 @@ the one-time import first, so the import's lock is the only lock needed.
   a grant family existed, is fixed at its first gateway read to what the manifest
   declares then (`_freeze_declared`), which is what it granted until then, so no app
   loses access on upgrade and a later write to `app.json` is held back like any
-  widening. A register with no manifest yet stores `{"awaitingManifest": true}`:
-  nothing is approved until the owner's registration route sends the first
-  manifest, which approves what it declares; a manifest written into the app's
-  folder meanwhile approves nothing.
+  widening. An explicit-only family (`point_grants.explicit_only_grant_families()`)
+  takes nothing in that freeze: no owner was shown it before approved sets existed,
+  so it waits on the app page's "Approve new permissions". A register with no
+  manifest yet stores `{"awaitingManifest": true}`: nothing is approved until the
+  owner's registration route sends the first manifest, which approves what it
+  declares; a manifest written into the app's folder meanwhile approves nothing.
 - **Approval.** The detail page lists the held-back entries under "API access"
   and "WebSocket events" (the Permissions card's labels) with a plain-words line
   for each group, and tags them "not approved" on the Permissions card. Its
@@ -6771,7 +6773,8 @@ any of them names an app. `APP_SDK_LEVEL` is one integer on both sides
 (`apps/app_sdk_level.py`, `website/src/app-sdk/sdkLevel.ts`), pinned equal by
 `test/test_app_sdk_level_mirror.py`. Level 2 adds `ctx.lifecycle` (§32b) and the SDK's
 pull-request panel (§18g); level 6 adds the SDK's issue list (§18h); level 7 adds the
-manifest's `agentReadOnlyDirs` (§39). An app reads `ctx.sdk_level` or the SDK export to detect an
+manifest's `agentReadOnlyDirs` (§39); level 8 adds `permissions.desktopCapabilities`
+(§35). An app reads `ctx.sdk_level` or the SDK export to detect an
 older host and degrade, instead of failing on a missing attribute.
 
 **Structural routes.** `RouteRegistry` reads each item a `routes` hook returns through
@@ -7557,32 +7560,82 @@ main-frame error document or transport failure is latched hidden (§6) until a l
 answered tick reloads it. A crashed page is closed; an `openOnEnable` one is reopened at
 tick cadence.
 
-**The bridge.** The page gets `window.kirocrewDesktopWindow`: `level` (1), `app`,
+**The bridge.** The page gets `window.kirocrewDesktopWindow`: `level` (2), `app`,
 `window`, `kind`, `ready()`, `close()`, `open(id)`, `setHitRegions(rects)`,
-`setFocusable(bool)` and `onShortcut(cb)`. The identity is informational: the host
+`setFocusable(bool)`, `onShortcut(cb)` and, at level 2, the capability calls below. The identity is informational: the host
 resolves every message to the window that sent it, from its main frame, still showing
 its own document, and acts only within that window's own app declaration. A page can
 open only a window its own app declares, shape (hit regions, focus) only an overlay, and
 nothing from a sender the host did not create. Hit regions are at most 16 finite boxes
 in page pixels at the page's zoom; anything else leaves the overlay click-through.
 
+**Capabilities.** Beyond shaping its own windows, a page may ask the shell for three
+things, each only when its app names it in `permissions.desktopCapabilities` AND the
+owner approved it (owner ruling, #26967, 2026-11-13, comment 6841699202, item 3):
+`screenCapture`, `localFiles` and `gatewayChoice`, a closed set mirrored in
+`apps/desktop_capabilities.py` and `app-window-host-rules.js`. The declaration is a grant
+family of the app's approved-grants set (`point_grants.register_permission_grants`,
+explicit-only): an install approves what it declares, an update that adds one holds it
+back until the owner approves it on the app's page, a set stored before the key existed
+approves none, and a built-in's packaged declaration is approved. The trust prompt
+(`TrustAppModal`), the official catalog's pre-install projection, the detail page and the
+CLI install summary show it. The app row carries `desktopCapabilitiesGrant: {approved,
+staged}`; the shell serves `declared ∩ approved` and nothing for a row without it (a
+gateway that predates the key). Every call is resolved to its sender as above, re-checked
+against the app's current declaration, and refused otherwise; a window whose app's served
+set changes is closed, so a withdrawn capability leaves no window opened with it.
+
+- `screenCapture`: the window's webContents is registered with `capture-trust.js` on the
+  origin it loads, so the default session's display-media handler grants it a screen; any
+  other hosted window is refused by that module's first leg.
+- `localFiles`: `revealFile(path)` and `openImage(path)` run `app-local-files.js`, the one
+  copy of the rules Mochi's shell windows use too: reveal only an existing regular file;
+  open only a regular file whose resolved path carries an image extension, through
+  `openPathHardened`. A path is a string of at most 4096 characters with no NUL.
+- `gatewayChoice`: `listGateways()` and `chooseGateway(id)` run `app-window-gateways.js`.
+  The choice is kept per app in the shell's store (`appWindowGatewayChoices`), never on a
+  gateway. A crew is a target only when core reports its tunnel connected, core's
+  connected-only `POST /api/instances/<id>/connect?only_if_connected=1` hands back its
+  token (checked under the manager lock, so a disconnect is never undone), and that
+  crew's `/api/apps` says the same app is enabled and its manifest there declares every
+  window this computer opens (an older one that lacks one would close it on load); the
+  windows then load the crew's own `/popout/desktop/<app>/<id>` and their navigation is
+  pinned to that origin. A definite no (feature off, id gone, not connected, app off
+  there, a window missing there) falls back to self; a
+  non-answer changes nothing, so the app keeps the target it has (this computer's
+  gateway until a crew answers). A resolved crew is reused for 60 seconds and a listing for 10. The shell
+  never opens a tunnel and the page never sees a host name, port or credential.
+
 **Levelling.** The seam belongs to the desktop shell, which a browser-only host never
 offers, so it is versioned by the bridge's own `level` rather than `APP_SDK_LEVEL`: an
 app feature-detects the bridge, and a gateway that predates the block shows the shell
-no declaration, so nothing opens.
+no declaration, so nothing opens. Level 2 adds `capabilities`, `revealFile`,
+`openImage`, `listGateways` and `chooseGateway`. The gateway half (the manifest key and
+its grant row) is `APP_SDK_LEVEL` 8, so an adoption pin can require a host that
+discloses and approves it.
 
 **What still runs in the shell.** Mochi and Crew Companion keep their main-process
-windows until each moves onto this seam (§9).
+windows until each moves onto this seam (§9). Mochi's manifest already declares the three
+capabilities its shell code uses (the wheel copy first, so an external Mochi declaring
+them is no widening), and its reveal-file and open-image handlers run `app-local-files.js`.
 `website/electron/test/app-window-host-independence.test.js` pins the host free of
 every built-in name and of app-owned shell code, and pins the app-owned shell
 directories and `main.js` requires as rows that only shrink.
 
-Writers: `apps/desktop_manifest.py`, `apps/manifest.py`, `apps/discovery.py`,
+Writers: `apps/desktop_manifest.py`, `apps/desktop_capabilities.py`, `apps/manifest.py`,
+`apps/manifest_sections.py`, `apps/discovery.py`, `apps/point_grants.py`,
+`apps/manager_lookup.py`, `apps/official_catalog.py`, `apps/permissions.py`,
 `website/electron/app-window-host.js`, `website/electron/app-window-host-rules.js`,
-`website/electron/app-window-preload.js`, `website/electron/main.js`,
+`website/electron/app-window-preload.js`, `website/electron/app-local-files.js`,
+`website/electron/app-window-gateways.js`, `website/electron/main.js`,
 `website/src/desktopWindow/desktopWindowTarget.ts`,
 `website/src/desktopWindow/DesktopWindowRoot.tsx`, `website/src/components/AppHost.tsx`,
-`website/src/main.tsx`. Tests: `test/test_app_manifest_desktop.py`,
+`website/src/main.tsx`, `website/src/components/appstore/TrustAppModal.tsx`,
+`website/src/components/appstore/desktopCapabilities.ts`,
+`website/src/pages/AppDetailGrantBoxes.tsx`, `website/src/pages/AppDetailPage.tsx`.
+Tests: `test/test_app_manifest_desktop.py`, `test/test_app_desktop_capabilities.py`,
+`website/electron/test/app-local-files.test.js`,
+`website/electron/test/app-window-gateways.test.js`,
 `website/electron/test/app-window-host.test.js`,
 `website/electron/test/app-window-host-rules.test.js`,
 `website/electron/test/app-window-preload.test.js`,
@@ -7769,8 +7822,8 @@ store moves under `apps/ops-mission-control/data/` (#32681; see `ops-mission-con
 "Repository boundary").
 
 **Seam level.** The masks are level 3 (level 4 adds §30.1's tool keys, level 5
-`ctx.app_token` and `ctx.gateway_origin`, level 6 §18h's issue list, and level 7 §39's
-`agentReadOnlyDirs`):
+`ctx.app_token` and `ctx.gateway_origin`, level 6 §18h's issue list, level 7 §39's
+`agentReadOnlyDirs`, and level 8 §35's `permissions.desktopCapabilities`):
 an app that stores a credential reads `ctx.sdk_level` and, below 3, knows nothing masks
 the file.
 
@@ -7958,7 +8011,7 @@ copying its target into the agent-readable record. Agents may now read it, which
 write" names. A purge uninstall now
 removes the record with the app's data.
 
-**Seam level.** `APP_SDK_LEVEL` is 7. An app reads `ctx.sdk_level` and, below 7, knows
+**Seam level.** `agentReadOnlyDirs` is level 7. An app reads `ctx.sdk_level` and, below 7, knows
 nothing fences the directories: an older host ignores the key.
 
 Writers: `apps/agent_readonly_dirs.py`, `apps/credential_masks.py`, `apps/manifest.py`,

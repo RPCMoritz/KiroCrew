@@ -928,6 +928,8 @@ app.whenReady().then(async () => {
       cookieHeader: sessionCookieHeader,
       preloadPath: path.join(__dirname, "app-window-preload.js"),
       log: glog,
+      // Which crew each app's windows show is this computer's choice, kept by the shell.
+      gatewayStore: store,
     });
     appWindowHost.start();
   } catch (error) {

@@ -70,6 +70,7 @@ export function useAppActions({
       memberThreads: installed.manifest.permissions?.memberThreads === true,
       workerAutoApprove: installed.manifest.permissions?.workerAutoApprove === true,
       reachableByUserSessions: installed.manifest.permissions?.reachableByUserSessions,
+      desktopCapabilities: installed.manifest.permissions?.desktopCapabilities,
     }
     if (row) return {
       name: row.name,
@@ -81,6 +82,7 @@ export function useAppActions({
       memberThreads: row.manifest?.permissions?.memberThreads === true,
       workerAutoApprove: row.manifest?.permissions?.workerAutoApprove === true,
       reachableByUserSessions: row.manifest?.permissions?.reachableByUserSessions,
+      desktopCapabilities: row.manifest?.permissions?.desktopCapabilities,
     }
     return { name }
   }

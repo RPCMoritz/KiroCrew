@@ -1721,8 +1721,10 @@ notes (`/api/notifications/own` and the dashboard's `useAppNotifications()`, see
 [Backend Environment Variables](#backend-environment-variables)), level 5 adds
 [`ctx.app_token()` and `ctx.gateway_origin()`](#app-token-ctxapp_token), level 6
 adds the dashboard's [issue list](#issue-list) (`useIssues`, `IssueList`, `IssueCard`),
-and level 7 adds the manifest's `agentReadOnlyDirs` (see
-[manifest-reference.md](manifest-reference.md#agent-read-only-directories)); each level
+level 7 adds the manifest's `agentReadOnlyDirs` (see
+[manifest-reference.md](manifest-reference.md#agent-read-only-directories)), and level 8
+adds the manifest's `permissions.desktopCapabilities` (see
+[manifest-reference.md](manifest-reference.md#desktop--windows-and-global-shortcuts-in-the-desktop-app)); each level
 includes every level below it. Read it
 with `getattr(ctx, "sdk_level", 0)`. When it is lower than your app needs, call
 `ctx.health.mark_degraded(...)` with the consequence and keep serving what you can.
