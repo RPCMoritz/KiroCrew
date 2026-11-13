@@ -795,7 +795,12 @@ def _url_payload_command(n: int) -> str:
 #: Raised by 20, from 35,804, to 35,824, for ``StreamRedactor.release_sentence_end`` in
 #: ``text_redaction``: a withheld run that is one plain word ending a sentence can be
 #: committed before the next chunk arrives. No pattern, pass or commit boundary moved.
-_PACKAGE_LINE_BUDGET = 35_824
+#: Raised by 27, from 35,824, to 35,851, for the paren walk resuming at a span's open:
+#: ``_quote_states`` records the quote state a walk from offset 0 holds at each step,
+#: ``_matching_close_paren`` starts there for ``_substitution_bodies`` and
+#: ``shell_commands.without_substitutions``, and ``_iter_shell_chars`` takes a start
+#: offset instead of a copied slice. Same verdicts, less work. Re-measured.
+_PACKAGE_LINE_BUDGET = 35_851
 
 #: Ceiling on any ONE file in the package. This is what the bound is really for --
 #: a package total says nothing about a single file growing back into a second
