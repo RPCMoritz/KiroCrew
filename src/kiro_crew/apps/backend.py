@@ -1194,8 +1194,9 @@ def _start_app_backend_body(app_name: str, manifest: Any) -> AppProcess | None:
     # control available. What still bounds a forged cache there is provenance rather than
     # permissions: with ``require_policy_signature`` set in the admission policy, a document
     # nobody trusted is refused however it got onto disk.
-    # The app's OWN hidden state leaves (e.g. md-notebook's vault registry, PAT, and
-    # sync settings) are unmasked for exactly this spawn: the mask fences agent
+    # The app's OWN hidden state leaves core names in ``_APP_BACKEND_OWNED_LEAVES`` (none
+    # today: Notes declares its state in its manifest) are unmasked for exactly this
+    # spawn: the mask fences agent
     # subprocesses, but this backend is each leaf's only legitimate reader/writer, and
     # leaving the mask on breaks the app outright. Unlike the governance cache
     # these are the app's own read-write state, so the blanket "visible" meaning is the

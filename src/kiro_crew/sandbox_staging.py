@@ -1237,7 +1237,10 @@ def _materialize_md_notebook_mask_targets(established: list[str] | None = None) 
 
 
 def _migrate_md_notebook_legacy_state() -> list[str]:
-    """Run the Notes builtin's one-time legacy-state move before this sandbox launches.
+    """Run the Notes builtin's one-time state moves before this sandbox launches.
+
+    Both of them, in order: the bare legacy names into ``md-notebook-staging/``, then that
+    directory into the app's own ``data/state/`` (:mod:`kiro_crew.md_notebook_state`).
 
     Spawn prep runs it, not only the Notes backend's own spawn, so the first pass and its
     marker that closes promotion happen as early as possible, before an agent of this build
@@ -1272,8 +1275,13 @@ def _migrate_md_notebook_legacy_state() -> list[str]:
         # where a write would land, so it writes nothing. The Notes backend's own writer
         # refuses the same chain, so nothing on this host writes Notes state at all.
         return []
+    app_state_dir = Path(root).joinpath(*mns.APP_STATE_PARTS)
     try:
-        return mns.migrate_legacy_state(state_dir, Path(root).joinpath(*mns.LEGACY_DIR_PARTS))
+        moved = mns.migrate_legacy_state(state_dir, Path(root).joinpath(*mns.LEGACY_DIR_PARTS))
+        if carveout_chain_has_planted_link(str(app_state_dir / mns.STATE_FILE_NAMES[0])):
+            return moved
+        # Then on into the app's own data directory, which its manifest masks.
+        return [*moved, *mns.move_state_to_app_data(app_state_dir, state_dir)]
     except OSError as exc:
         # Log and continue: the stubs planted next keep every bare name masked, and the
         # Notes backend stays down until a later pass seals.
@@ -1281,7 +1289,7 @@ def _migrate_md_notebook_legacy_state() -> list[str]:
             "the Notes builtin's one-time move of its old state into %s did not finish: %s. "
             "Notes stays off until it does; the next spawn retries it. Fix the cause (disk "
             "space, permissions, or an extra hard link on the PAT).",
-            state_dir,
+            app_state_dir,
             exc,
         )
         return []

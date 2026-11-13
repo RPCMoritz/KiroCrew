@@ -6,8 +6,9 @@ failed with ``EXDEV``. Each test here spawns a child under the real namespace sa
 while the test process plays the gateway, then judges what the child did by what is on
 disk afterwards.
 
-The backend child gets the Notes carve-out (``app_backend_visible_targets``) and runs the
-real state writers. An agent child gets no carve-out and must see an empty stand-in. Each
+The backend child gets back what the Notes manifest declares (``credentialMasks``:
+``"state/"``, through ``app_declared_mask_targets``) and runs the real state writers. An
+agent child gets nothing back and must see an empty stand-in. Each
 child reports its mount namespace, so a run that never entered the sandbox fails instead
 of passing on the host's own view.
 
@@ -130,15 +131,16 @@ def test_the_backend_writes_every_state_file_inside_the_sandbox(home):
     legacy = home.joinpath(*mns.LEGACY_DIR_PARTS)
     legacy.mkdir(parents=True)
     (legacy / "pat").write_text("ghp_from_the_old_layout")
-    state = home / mns.STATE_DIR_LEAF
+    state = home.joinpath(*mns.APP_STATE_PARTS)
 
     report = _run(
         [sys.executable, "-c", _BACKEND],
         home,
-        extra_visible_dirs=sandbox.app_backend_visible_targets("md-notebook"),
+        extra_visible_dirs=sandbox.app_declared_mask_targets("md-notebook", builtin=True),
     )
 
-    # Spawn prep moved the old PAT in before the child started, and the child saw it.
+    # Spawn prep moved the old PAT in, through both moves, before the child started, and
+    # the child saw it.
     assert report["read_moved_pat"] == {"ok": True, "value": "ghp_from_the_old_layout"}, report
     for step in ("pat", "vaults", "settings"):
         assert report[step] == {"ok": True, "value": None}, report
@@ -148,12 +150,18 @@ def test_the_backend_writes_every_state_file_inside_the_sandbox(home):
     assert json.loads((state / "vaults.json").read_text()) == [{"id": "v1"}]
     assert json.loads((state / "settings.json").read_text()) == {"autoSync": False}
     assert (legacy / "pat").read_bytes() == b"", "the moved name holds only its stub"
+    assert (home / mns.STATE_DIR_LEAF / "pat").read_bytes() == b"", "so does the middle one"
     assert not [p for p in state.iterdir() if p.suffix == ".tmp"], "a temp was left behind"
 
 
 def test_an_agent_sees_an_empty_state_directory(home):
-    state = home / mns.STATE_DIR_LEAF
-    state.mkdir()
+    # Already moved, so spawn prep leaves it alone.
+    staging = home / mns.STATE_DIR_LEAF
+    staging.mkdir()
+    (staging / mns.MIGRATION_MARKER).write_text("{}\n")
+    (staging / mns.APP_MOVE_MARKER).write_text("{}\n")
+    state = home.joinpath(*mns.APP_STATE_PARTS)
+    state.mkdir(parents=True)
     (state / "pat").write_text("ghp_secret")
 
     report = _run([sys.executable, "-c", _AGENT, str(state)], home)

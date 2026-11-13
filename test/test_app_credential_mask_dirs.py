@@ -43,6 +43,8 @@ def home(tmp_path, monkeypatch) -> Path:
     monkeypatch.setenv("HOME", str(tmp_path))
     monkeypatch.setenv("KIROCREW_ASSUME_GATEWAY_RUNNING", "0")
     monkeypatch.setattr(credential_masks, "config_dir", lambda: home)
+    # Only the manifests each case writes, not what the built-ins ship.
+    monkeypatch.setattr(credential_masks, "_builtin_manifests", lambda: [])
     credential_masks.clear_cache()
     sandbox.reset_backend()
     yield home
