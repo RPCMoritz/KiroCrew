@@ -93,9 +93,11 @@ failure is thrown.
 
 The path matcher uses the backend's declared-pattern semantics: `/api/example`
 matches itself and slash-delimited children; `/api/example/*` also includes the
-base path; `/api/example*` includes any string prefix match. Blank entries match
-nothing, surrounding whitespace is stripped, and request paths are normalized
-before matching. A bare trailing slash is literal, not shorthand for `/*`.
+base path; `/api/example*` includes any string prefix match; `=/api/example`
+matches that one path and no child, and reads no wildcard (seam level 7: an older
+host matches such an entry to nothing, so the request is refused there). Blank
+entries match nothing, surrounding whitespace is stripped, and request paths are
+normalized before matching. A bare trailing slash is literal, not shorthand for `/*`.
 
 An explicit authentication-expiry response (`403`, `X-Auth-Required: true`)
 notifies the dashboard's existing recovery handler. It does not turn ordinary
@@ -1720,7 +1722,8 @@ adds the manifest's `credentialMasks` (see
 notes (`/api/notifications/own` and the dashboard's `useAppNotifications()`, see
 [Backend Environment Variables](#backend-environment-variables)), level 5 adds
 [`ctx.app_token()` and `ctx.gateway_origin()`](#app-token-ctxapp_token), and level 6
-adds the dashboard's [issue list](#issue-list) (`useIssues`, `IssueList`, `IssueCard`); each level
+adds the dashboard's [issue list](#issue-list) (`useIssues`, `IssueList`, `IssueCard`), and level 7
+adds the exact `permissions.api` entry (`=/api/example`, see the path matcher above); each level
 includes every level below it. Read it
 with `getattr(ctx, "sdk_level", 0)`. When it is lower than your app needs, call
 `ctx.health.mark_degraded(...)` with the consequence and keep serving what you can.
