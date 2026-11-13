@@ -407,7 +407,9 @@ the channel users cannot mute (`notifications.settings.PROTECTED_CHANNELS`), at 
 priority: the edit is not in effect until the owner decides, so no mute may hide that it is
 waiting. The Settings nav dot reads only the pending count (the GET below and the
 `config_pending_changed` WebSocket event), never the bell or its preferences. Only the
-dashboard OWNER resolves it: `POST /api/security/config-pending/{leaf}/apply` endorses the
+OWNER resolves it, in the dashboard or, without one, from their own terminal with `kirocrew config
+pending` (the same writer and signature check; refused inside a Kiro Crew sandbox, not an MCP
+tool): `POST /api/security/config-pending/{leaf}/apply` endorses the
 on-disk version and `.../discard` restores the endorsed copy, each through the leaf's own
 endorsing writer, each behind `require_owner_dashboard_request` and the dashboard CSRF
 barrier, and each naming the reviewed version's signature (409 when the file changed since).
@@ -2758,7 +2760,9 @@ no file, and a sandboxed process cannot create the file first with `disable_all`
   state, and logs a WARNING because its `user_added` rules then do not apply.
 - **Write (dashboard):** the `/api/security/denied-commands` mutations run
   `_write_denied_state` — an atomic read-modify-write of `denied_commands.json`
-  under the shared config lock, routed through
+  under the shared config lock and the file's own `<file>.lock` sidecar
+  (`_config_write_lock`, which `kirocrew config pending` in another process and
+  both `computer_use.json` writers hold the same way), routed through
   `atomic_write(restrict_to_owner=True)`. The lockdown lands on the temp file
   before any content reaches it, so the keystone never exists in a
   world-readable file: 0o600 on POSIX, owner-only DACL on Windows. On a

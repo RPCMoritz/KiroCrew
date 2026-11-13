@@ -54,6 +54,7 @@ from aiohttp import web
 from kiro_crew import _facade_mirror
 from kiro_crew.atomic_write import read_bytes_with_retry
 from kiro_crew.config.loader import (
+    _config_write_lock,
     denied_commands_path,
 )
 from kiro_crew.dashboard.handlers.agents import _get_config_lock
@@ -355,24 +356,26 @@ async def _write_denied_state(mutate, *, resolving_pending: bool = False) -> dic
     def _read_modify_write() -> dict:
         from kiro_crew.config import loosening_provenance
 
-        denied = _read_denied_strict()
-        mutate(denied)
-        payload = text_bytes(json.dumps(denied, indent=2) + "\n")
-        # Endorse these exact bytes BEFORE the rename publishes them, so
-        # load_denied_commands_state keeps this opt-out and drops one written directly
-        # inside a sandbox (the per-file read-only bind stops covering this file after
-        # the rename), and nothing landed on the name around the rename is endorsed.
-        # The same bytes are published, so the copy equals the file on every platform.
-        with loosening_provenance.endorsing(
-            loosening_provenance.LEAF_DENIED_COMMANDS,
-            payload,
-            resolving_pending=resolving_pending,
-        ):
-            # atomic_write(..., restrict_to_owner=True) refuses a linked parent
-            # before it mkdir's, then locks the temp. A mkdir here would walk
-            # through a planted link and create dirs under its target first.
-            atomic_write(path, payload, restrict_to_owner=True)
-        return denied
+        # The sidecar flock also serializes another process's writer (config pending).
+        with _config_write_lock(path):
+            denied = _read_denied_strict()
+            mutate(denied)
+            payload = text_bytes(json.dumps(denied, indent=2) + "\n")
+            # Endorse these exact bytes BEFORE the rename publishes them, so
+            # load_denied_commands_state keeps this opt-out and drops one written directly
+            # inside a sandbox (the per-file read-only bind stops covering this file after
+            # the rename), and nothing landed on the name around the rename is endorsed.
+            # The same bytes are published, so the copy equals the file on every platform.
+            with loosening_provenance.endorsing(
+                loosening_provenance.LEAF_DENIED_COMMANDS,
+                payload,
+                resolving_pending=resolving_pending,
+            ):
+                # atomic_write(..., restrict_to_owner=True) refuses a linked parent
+                # before it mkdir's, then locks the temp. A mkdir here would walk
+                # through a planted link and create dirs under its target first.
+                atomic_write(path, payload, restrict_to_owner=True)
+            return denied
 
     async with _get_config_lock():
         # ConfigCorruptError raised in the executor propagates through await.

@@ -86,6 +86,7 @@ from kiro_crew.computer_use.types import (
 from kiro_crew.config import loosening_provenance
 from kiro_crew.config.loader import (
     PendingEditBlocksSave,
+    _config_write_lock,
     computer_use_state_path,
     read_endorsed_config_text,
 )
@@ -561,9 +562,10 @@ def _write_state(patch: dict[str, Any]) -> None:
     populated-but-unparseable ceiling file — resetting an operator's allow-list to
     defaults because we could not parse it would be a silent security downgrade.
     """
-    state = _read_state_strict()
-    state.update(patch)
-    enable_state.save_state(state)
+    with _config_write_lock(enable_state.computer_use_state_path()):
+        state = _read_state_strict()
+        state.update(patch)
+        enable_state.save_state(state)
 
 
 def _write_limits(patch: dict[str, Any]) -> None:
