@@ -1100,8 +1100,8 @@ def _shot_options(args: dict[str, Any]) -> dict[str, Any]:
         if box is None:
             return refusal(
                 "bad_args",
-                "`region` needs x, y (>= 0) and width, height (> 0) in page pixels, "
-                "the same pixels as click x,y",
+                "`region` needs [x, y, width, height]: x, y >= 0 and width, height > 0 "
+                "in page pixels, the same pixels as click x,y",
             )
         out["region"] = box
     if (out.get("full") is True) + ("ref" in out) + ("region" in out) > 1:
@@ -1110,11 +1110,14 @@ def _shot_options(args: dict[str, Any]) -> dict[str, Any]:
 
 
 def _region_box(region: Any) -> list[float] | None:
-    """``{x, y, width, height}`` -> ``[x, y, width, height]``, or ``None`` if not a box."""
-    if not isinstance(region, dict):
+    """``[x, y, width, height]`` as four numbers, or ``None`` if not a box.
+
+    A list, not an object: the ``browser`` tool passes only scalars and lists of
+    them (``_args_are_scalar``), so an object-valued ``region`` never gets here.
+    """
+    if not isinstance(region, list) or len(region) != 4:
         return None
-    values = [_number(region.get(k)) for k in ("x", "y", "width", "height")]
-    x, y, width, height = values
+    x, y, width, height = (_number(value) for value in region)
     if x is None or y is None or width is None or height is None:
         return None
     if x < 0 or y < 0 or width <= 0 or height <= 0:

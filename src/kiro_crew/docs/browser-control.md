@@ -60,7 +60,7 @@ to load, read the browser console, take a screenshot (saved as a PNG it can show
 you in the chat), and list or switch its own tabs.
 
 A screenshot takes optional arguments: `full` for the whole scrollable page,
-`ref` for one element, `region` (`x`, `y`, `width`, `height`, the same pixels a
+`ref` for one element, `region` (`[x, y, width, height]`, the same pixels a
 click uses) for a box magnified up to four times so small text is readable, and
 `max_dim` for the longest side in pixels (64 to 4096). Give at most one of
 `full`, `ref` and `region`. With none, the visible page is saved as before. The

@@ -25,6 +25,7 @@ import pytest
 
 from kiro_crew import browser_snapshots
 from kiro_crew.browser_harness import ops
+from kiro_crew.mcp_tools import browser as browser_tool
 
 _METHOD_RE = re.compile(r"\.(\w+)\((.*)\)$", re.DOTALL)
 
@@ -948,12 +949,36 @@ def test_a_screenshot_by_ref_honours_the_size_cap(fake: FakeBrowser) -> None:
 
 def test_a_screenshot_of_a_region_magnifies_it_to_the_zoom_size(fake: FakeBrowser) -> None:
     _shoot_into(fake, "screenshot_clip")
-    region = {"x": 5, "y": 6, "width": 60, "height": 20}
+    region = [5, 6, 60, 20]
     assert run(ops.run_op("screenshot", {"region": region}, fake.ctx()))["ok"] is True
     (kw,) = _calls(fake, "screenshot_clip")
     assert (kw["x"], kw["y"], kw["width"], kw["height"]) == (5, 6, 60, 20)
     assert kw["magnify"] == ops.SHOT_ZOOM_MAGNIFY and kw["max_dim"] == ops.SHOT_ZOOM_DIM
     assert fake.page_methods().count("resolve") == 0
+
+
+def test_a_region_screenshot_through_the_browser_tool_reaches_the_capture(
+    fake: FakeBrowser, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The ``region`` the tool advertises passes its argument gate, which admits
+    only scalars and lists of them, and arrives here as the box it names."""
+    _shoot_into(fake, "screenshot_clip")
+    monkeypatch.setattr(browser_tool.mcp_core, "_vet_browse_governance", lambda s: None)
+    monkeypatch.setattr(browser_tool.mcp_core, "_resolve_session_key", lambda: "")
+    sent: list[dict[str, Any]] = []
+
+    def post(_key: str, op: str, args: dict, _header: str, _timeout: float) -> tuple[int, dict]:
+        # As /api/browser/op answers: a result wrapped when it is ok, a refusal as it is.
+        sent.append(args)
+        result = run(ops.run_op(op, args, fake.ctx()))
+        return 200, ({"ok": True, "result": result} if result.get("ok") else result)
+
+    monkeypatch.setattr(browser_tool, "_post_command", post)
+    out = browser_tool.browser("browser", {"op": "screenshot", "args": {"region": [5, 6, 60, 20]}})
+    assert out.startswith("Browser screenshot saved: "), out
+    assert sent == [{"region": [5, 6, 60, 20]}]
+    (kw,) = _calls(fake, "screenshot_clip")
+    assert (kw["x"], kw["y"], kw["width"], kw["height"]) == (5, 6, 60, 20)
 
 
 @pytest.mark.parametrize(
@@ -965,11 +990,13 @@ def test_a_screenshot_of_a_region_magnifies_it_to_the_zoom_size(fake: FakeBrowse
         {"max_dim": "big"},
         {"ref": "banana"},
         {"region": "left"},
-        {"region": {"x": 1, "y": 1, "width": 0, "height": 5}},
-        {"region": {"x": -1, "y": 1, "width": 5, "height": 5}},
-        {"region": {"x": 1, "y": 1, "width": 5}},
+        {"region": [1, 1, 0, 5]},
+        {"region": [-1, 1, 5, 5]},
+        {"region": [1, 1, 5]},
+        {"region": [1, 1, 5, "5"]},
+        {"region": {"x": 1, "y": 1, "width": 5, "height": 5}},
         {"full": True, "ref": "e1"},
-        {"ref": "e1", "region": {"x": 1, "y": 1, "width": 5, "height": 5}},
+        {"ref": "e1", "region": [1, 1, 5, 5]},
     ],
 )
 def test_screenshot_refuses_bad_options_before_touching_the_page(
@@ -1000,7 +1027,7 @@ def test_a_screenshot_by_ref_of_an_element_with_no_size_is_ref_stale(fake: FakeB
     [
         {"full": True},
         {"ref": "e1"},
-        {"region": {"x": 0, "y": 0, "width": 10, "height": 10}},
+        {"region": [0, 0, 10, 10]},
     ],
 )
 def test_every_screenshot_form_keeps_the_secret_field_guard(

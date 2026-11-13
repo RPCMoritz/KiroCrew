@@ -48,7 +48,7 @@ def schemas() -> list[dict[str, Any]]:
                 "back; console {limit?}; screenshot {full?, max_dim?, ref?, region?} (writes a PNG, "
                 "returns its absolute path: show it with ![..](path); no argument = the "
                 "visible page; `full` = the whole scrollable page; `ref` = one element; "
-                "`region` {x, y, width, height} in click pixels = that box magnified up "
+                "`region` [x, y, width, height] in click pixels = that box magnified up "
                 "to 4x to read small text; `max_dim` = longest side in pixels, 64 to "
                 "4096; give at most one of full, ref, region); tabs {action: list|switch"
                 "|new, target_id?, url?} over the tabs you opened. Only public "
