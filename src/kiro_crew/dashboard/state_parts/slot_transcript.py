@@ -405,8 +405,12 @@ def append(
         # Shared Crew: a live user row written by a request handler names
         # that request's server-derived author unless it already names one.
         meta = with_request_author(meta)
-        # The row's author, if a person, joins the session's participants.
-        note_author(self, meta)
+        # The row's author, if a person, joins the session's participants. A
+        # caller-supplied *ts* marks a row replayed from a transcript (a
+        # resume replays stored rows live): reopening a session is not writing
+        # in it.
+        if not ts:
+            note_author(self, meta)
     if meta:
         msg["meta"] = meta
     # Stamp a per-row delivery identity. A client sees the SAME row through

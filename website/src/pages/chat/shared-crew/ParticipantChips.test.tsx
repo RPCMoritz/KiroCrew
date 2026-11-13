@@ -41,6 +41,17 @@ describe('ParticipantChips', () => {
     expect(more.getAttribute('title')).toContain(participantTitle(JO))
   })
 
+  it('counts the people the gateway dropped past its cap into +N', () => {
+    render(<ParticipantChips participants={[PRIYA, SAM, LEE, KIM]} dropped={5} testId="t" />)
+    expect(screen.getByTestId('t-more')).toHaveTextContent('+6')
+    expect(screen.getByTestId('t').getAttribute('aria-label')).toMatch(/9/)
+  })
+
+  it('draws its letters at the 10px minimum', () => {
+    render(<ParticipantChips participants={[PRIYA, SAM, LEE, KIM]} testId="t" />)
+    for (const chip of within(screen.getByTestId('t')).getAllByRole('img')) expect(chip.className).toContain('text-[10px]')
+  })
+
   it('draws no +N chip at the cap, and nothing for nobody', () => {
     const { container } = render(<ParticipantChips participants={[]} testId="empty" />)
     expect(container).toBeEmptyDOMElement()

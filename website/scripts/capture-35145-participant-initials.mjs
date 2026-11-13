@@ -1,5 +1,5 @@
 /**
- * Screenshot harness for contributor initials on Shared Crew rows (#35145).
+ * Screenshot harness for contributor initials on Shared Crew rows.
  *
  * Drives the REAL built SPA (website/dist) on a team Crew (preview on, a
  * teammate observed) and captures, in dark and light:
