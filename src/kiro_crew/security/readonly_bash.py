@@ -1618,3 +1618,24 @@ def writes_through_redirect(cmd: str) -> bool:
     or not, since telling a quoted ``>`` apart needs bash's full quoting rules.
     """
     return ">" in _DEVNULL_REDIR_RE.sub(" ", cmd)
+
+
+def may_write_through_git_flag(cmd: str) -> bool:
+    """Whether a word of ``cmd`` may supply a git file-writing flag (``--output``).
+
+    Checked on every word, wherever it sits, so an earlier reason from
+    :func:`unsafe_bash_reason` cannot hide it. A word whose real spelling is unknown
+    before it runs (unresolvable quoting, an expansion, a glob) counts as one.
+    """
+    try:
+        words = shlex.split(cmd)
+    except ValueError:
+        return True
+    git_flags = tuple(
+        {f for key, flags in _WRITE_FLAGS.items() if key[:4] == "git " for f in flags}
+    )
+    return bool(
+        _matched_flag(words, git_flags)
+        or _SHELL_EXPANSION_RE.search(cmd)
+        or any(_glob_hides_word(word, False) for word in words)
+    )
