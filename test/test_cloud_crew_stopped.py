@@ -27,8 +27,8 @@ TAG = "kc-3f9a"
 
 
 @pytest.fixture(autouse=True)
-def _posix_host(monkeypatch):
-    monkeypatch.setattr(hc.sys, "platform", "linux")
+def _posix_host(_floor_monkeypatch):
+    _floor_monkeypatch.setattr(hc.sys, "platform", "linux")
 
 
 class _Tunnel:
