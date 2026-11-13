@@ -562,21 +562,62 @@ def _python_reads_stdin(later_tokens: list[str]) -> bool:
     return True  # nothing but flags → bare interpreter reads stdin
 
 
-def _data_consumer_command_disqualified(tokens: "list[str]") -> bool:
-    """True where NO token in *tokens* can claim the data-consumer exemption.
+def _data_consumer_command_disqualified(tokens: "list[str]") -> "tuple[bool, ...]":
+    """Per token, True where it can NOT claim the data-consumer exemption.
 
-    The three guards collected here read ONLY *tokens*, so their answer is a
-    property of the whole command and is the same for every token in it.  They
-    live in one function so a caller holding a fixed argv can charge them ONCE
-    instead of once per candidate token: :func:`_data_consumer_exempt` is called
-    per payload inside a loop over a fixed argv, and the ``_SCRIPT_EXECUTES_RE``
-    sweep below is itself O(len(tokens)), so re-asking makes the enclosing walk
-    quadratic in payload count (18k payloads, ~293s).
-
-    Splitting them out cannot change any verdict: each is a pure function of
-    *tokens* and each REFUSES the exemption, so hoisting alters only how often
-    the same answer is computed, never what it is.
+    The three guards collected here read one PIPELINE of *tokens* (the run between
+    ``;`` / ``&&`` / ``&`` / newline boundaries, pipes kept together): ``echo x | sh``
+    runs what echo prints, but ``echo x | head; bash y.sh`` does not, and a frame
+    holds the whole command line. Reading the whole frame let one evaluator anywhere
+    withdraw the exemption from every command on the line.  The answer is computed
+    once per frame so a caller iterating its argv does not re-ask per token:
+    :func:`_data_consumer_exempt` is called per payload inside a loop over a fixed
+    argv, and the ``_SCRIPT_EXECUTES_RE`` sweep below is itself O(len(tokens)), so
+    re-asking makes the enclosing walk quadratic in payload count (18k payloads, ~293s).
     """
+    out: list[bool] = []
+    if any(_opens_group(token) for token in tokens):
+        # A group, subshell, function body or compound command pipes as ONE unit
+        # (``{ echo x; } | sh``), so its inner ``;`` ends no pipeline: judge the frame.
+        return (_pipeline_disqualified(tokens),) * len(tokens)
+    start = 0
+    for end, token in enumerate(tokens):
+        if end + 1 < len(tokens) and not _ends_pipeline(tokens, end):
+            continue
+        out.extend([_pipeline_disqualified(tokens[start : end + 1])] * (end + 1 - start))
+        start = end + 1
+    return tuple(out)
+
+
+#: Words that open or close a compound command; a frame holding one is judged whole.
+_COMPOUND_WORDS = frozenset(
+    {"if", "then", "elif", "else", "fi", "for", "select", "while", "until", "do", "done"}
+    | {"case", "esac", "function", "{", "}", "(", ")", "!", "[[", "]]"}
+)
+
+
+def _opens_group(token: str) -> bool:
+    """*token* is (or glues on) a group, subshell, function or compound-command word."""
+    if token.rstrip(";") in _COMPOUND_WORDS or token.endswith(("()", "(){")):
+        return True
+    return token.startswith("(") or token.endswith(")") and "(" not in token
+
+
+def _ends_pipeline(tokens: "list[str]", end: int) -> bool:
+    """``tokens[end]`` ends a pipeline: ``;``, ``&``, ``&&``, ``||``, a word glued to a
+    trailing ``;``, or a newline that does not continue a ``|`` on the line before."""
+    token = tokens[end]
+    # The frame tokenizer may spell a newline as ``;``; after a ``|`` either one only
+    # continues the pipeline on the next line (a real ``| ;`` is a syntax error).
+    if token in {"\n", ";"} and end and tokens[end - 1].endswith(("|", "&&", "||")):
+        return False
+    if token in {"\n", ";", "&", "&&", "||"}:
+        return True
+    return token.endswith(";") and not token.endswith(";;") and "|" not in token
+
+
+def _pipeline_disqualified(tokens: "list[str]") -> bool:
+    """True where NO token of the pipeline *tokens* can claim the exemption."""
     if _pipes_into_evaluator(tokens):
         return True
     # ``$(printf <name>) <verb>`` puts the consumer INSIDE a substitution that occupies
@@ -604,7 +645,7 @@ def _data_consumer_exempt(
     programs: "list[str]",
     tokens: "list[str]",
     *,
-    command_disqualified: bool,
+    command_disqualified: "bool | tuple[bool, ...]",
 ) -> bool:
     """True if *token* is an ARGUMENT of a command that treats arguments as data.
 
@@ -651,7 +692,9 @@ def _data_consumer_exempt(
     # token, and the parameter is REQUIRED so that a caller cannot fall back to
     # computing them per token -- the whole-argv sweep inside them is what makes
     # that shape quadratic in the token count.
-    if command_disqualified:
+    if command_disqualified is True or (
+        isinstance(command_disqualified, tuple) and command_disqualified[index]
+    ):
         return False
     return programs[index] in _DATA_CONSUMER_PROGRAMS
 
@@ -1347,7 +1390,7 @@ def _nested_shell_payloads(
     # gets the extra reading -- a later ``grep -c -e '<text>'``, the arguments after a
     # script file (``bash file -c ...``) or a data consumer's argument (``echo bash
     # -c -x ...``) do not.
-    inert_cache: "list[tuple[list[str], bool]]" = []
+    inert_cache: "list[tuple[list[str], tuple[bool, ...]]]" = []
     # Per-mode position memos, so every shell word in one command shares the scan: a
     # ``-c`` option run that reaches the command's end is walked once, not once per
     # carrier (``bash -c -o bash -c -o ... x`` was O(n^2)). The scope walk emits
