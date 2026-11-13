@@ -366,6 +366,17 @@ def test_the_pin_tool_checks_out_without_the_operators_git_config(tmp_path, monk
         ),
         ({"permissions": {"agentTurns": "true"}}, {}, {}),
         ({"credentialMasks": ["data/token.json"]}, {}, {"app.json credentialMasks": 3}),
+        (
+            {"permissions": {"webhookSource": True}},
+            {},
+            {"app.json permissions.webhookSource": 8},
+        ),
+        ({"permissions": {"webhookSource": "true"}}, {}, {}),
+        (
+            {},
+            {"backend/_host.py": "def f(ctx):\n    return ctx.webhook_source.refusal()\n"},
+            {"ctx.webhook_source": 8},
+        ),
         ({}, {"backend/routes.py": "def f(ctx):\n    return ctx.turns.run\n"}, {"ctx.turns": 2}),
         ({}, {"backend/_host.py": "x = _bound_ctx().lifecycle\n"}, {"ctx.lifecycle": 2}),
         (

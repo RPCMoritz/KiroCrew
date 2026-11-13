@@ -112,7 +112,7 @@ export type RegistryApp = {
     // global shortcuts, tray). A UX gate only — the marker is client-side.
     requiresDesktopApp?: boolean }
   manifest?: {
-    permissions?: { sessionApproval?: boolean; memberThreads?: boolean; workerAutoApprove?: boolean; reachableByUserSessions?: string[] }
+    permissions?: { sessionApproval?: boolean; memberThreads?: boolean; workerAutoApprove?: boolean; reachableByUserSessions?: string[]; webhookSource?: boolean }
     platform?: { requiresDesktopApp?: boolean }
   }
 }
@@ -250,6 +250,7 @@ export type InstalledApp = {
       memberThreads?: boolean
       workerAutoApprove?: boolean
       reachableByUserSessions?: string[]
+      webhookSource?: boolean
     }
     setup?: { onInstall?: string; onUpdate?: string; onUninstall?: string; onEnable?: string; onDisable?: string }
     minKiroCrewVersion?: string

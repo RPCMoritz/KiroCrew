@@ -1666,6 +1666,36 @@ disabled, uninstalled or loses trust, and the owner sees the permission at the t
 prompt. An update that adds it keeps running without it until the owner approves it on
 the app's page.
 
+### Webhook source (`ctx.webhook_source`)
+
+The security policy's answer for deliveries your app takes from outside on its own
+routes (a signed alert webhook). Present only when the manifest declares
+`permissions.webhookSource: true`; `None` otherwise and on a host below seam level 8, so
+feature-detect it and refuse the delivery without it:
+
+```python
+async def handle_webhook(request, ctx):
+    source = getattr(ctx, "webhook_source", None)
+    refusal = await source.refusal_async() if source is not None else "no webhook seam"
+    if refusal:
+        return web.json_response({"error": refusal, "code": "webhook_refused"}, status=401)
+    ...  # your own signature check, body cap and audit row, as before
+```
+
+| Member | Returns | Description |
+|--------|---------|-------------|
+| `source` | `str` | The source id a policy names to permit your webhook: your app's name. You do not choose it. |
+| `refusal()` | `str` | Why the policy refuses your webhook, `""` when it permits. Blocking: call it from a worker thread. |
+| `refusal_async()` | `str` | `refusal()` off the event loop. |
+
+The policy's `webhooks` scope lists the sources it permits (`{"webhooks": {"mode":
+"allow", "allow": ["<your app>"]}}`). With no policy the answer is `""` and your app's own
+switch decides; an LTS build refuses until a policy names your app. The answer is
+re-read on every call, so a manifest that drops the key refuses the next delivery, and an
+app named like a core source (`agent`) is always refused. The seam grants nothing else:
+the route, its gateway-token authentication, your signature check and your audit rows
+stay yours. The owner sees the declaration, with the source id, at the trust prompt.
+
 ### App token (`ctx.app_token()`)
 
 `await ctx.app_token()` returns an app token for your app, the same token
@@ -1720,7 +1750,8 @@ adds the manifest's `credentialMasks` (see
 notes (`/api/notifications/own` and the dashboard's `useAppNotifications()`, see
 [Backend Environment Variables](#backend-environment-variables)), level 5 adds
 [`ctx.app_token()` and `ctx.gateway_origin()`](#app-token-ctxapp_token), and level 6
-adds the dashboard's [issue list](#issue-list) (`useIssues`, `IssueList`, `IssueCard`); each level
+adds the dashboard's [issue list](#issue-list) (`useIssues`, `IssueList`, `IssueCard`), and
+level 8 adds [`ctx.webhook_source`](#webhook-source-ctxwebhook_source); each level
 includes every level below it. Read it
 with `getattr(ctx, "sdk_level", 0)`. When it is lower than your app needs, call
 `ctx.health.mark_degraded(...)` with the consequence and keep serving what you can.

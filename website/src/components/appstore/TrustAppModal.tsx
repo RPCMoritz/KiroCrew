@@ -20,7 +20,7 @@
  */
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { Code2, GitBranch, Loader2, MessagesSquare, RotateCcw, Server, ShieldAlert, Terminal } from 'lucide-react'
+import { Code2, GitBranch, Loader2, MessagesSquare, RotateCcw, Server, ShieldAlert, Terminal, Webhook } from 'lucide-react'
 
 import { api } from '../../api/client'
 import { isNotFoundError } from '../../api/apiError'
@@ -67,6 +67,8 @@ export type TrustAppTarget = Pick<RegistryApp, 'name' | '_registry' | 'origin'> 
   workerAutoApprove?: boolean
   /** The `permissions.reachableByUserSessions` verbs: what your chats may do to the sessions it runs. */
   reachableByUserSessions?: string[]
+  /** The app declares `permissions.webhookSource`: it takes inbound webhooks under its own name. */
+  webhookSource?: boolean
   /**
    * True when the manifest widens `sessionApproval` to the owner's member
    * threads (`permissions.memberThreads`). Shown only inside the session
@@ -797,6 +799,17 @@ export default function TrustAppModal({
                 <p className="text-text leading-relaxed">{i18nT('components.appstore.trustAppModal.user_session_reach_send')}</p>
               )}
               <p className="text-muted leading-relaxed">{i18nT('components.appstore.trustAppModal.user_session_reach_note')}</p>
+            </div>
+          )}
+          {app.webhookSource && (
+            <div className="flex flex-col gap-1.5 rounded-lg border border-border bg-[color-mix(in_srgb,var(--card)_88%,transparent)] px-3.5 py-3">
+              <div className="flex items-center gap-2 font-semibold text-text">
+                <Webhook size={14} className="shrink-0" />
+                <span>{i18nT('components.appstore.trustAppModal.webhook_source_heading')}</span>
+              </div>
+              <p className="text-text leading-relaxed">
+                {i18nT('components.appstore.trustAppModal.webhook_source_desc', { source: app.name })}
+              </p>
             </div>
           )}
           <div className="flex flex-wrap items-center gap-2 text-muted">

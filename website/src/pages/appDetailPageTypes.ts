@@ -120,6 +120,7 @@ interface AppPermissions {
   memberThreads?: boolean
   workerAutoApprove?: boolean
   reachableByUserSessions?: string[]
+  webhookSource?: boolean
   [key: string]: unknown
 }
 

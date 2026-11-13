@@ -62,6 +62,7 @@ _CONTEXT_SEAMS = {
     "auto_approve": 2,
     "app_token": 5,
     "gateway_origin": 5,
+    "webhook_source": 8,
 }
 
 #: A receiver whose last name says it is the app's context (``ctx``, ``self._ctx``,
@@ -117,7 +118,8 @@ def _seam_level_uses(tree: Path) -> dict[str, int]:
     """Every App Kit seam above level 1 that the app tree at *tree* uses, with its level.
 
     The manifest's declarations (``agentTools`` and ``permissions.agentTurns`` /
-    ``workerAutoApprove`` at level 2, ``credentialMasks`` at level 3) and the
+    ``workerAutoApprove`` at level 2, ``credentialMasks`` at level 3,
+    ``permissions.webhookSource`` at level 8) and the
     context seams any non-test ``.py`` file reaches. A miss lets a pin adopt on a
     host without the seam, so the scan errs wide: a false hit only asks for a
     higher ``--min-sdk-level``.
@@ -133,6 +135,8 @@ def _seam_level_uses(tree: Path) -> dict[str, int]:
             uses[f"app.json permissions.{flag}"] = 2
     if raw.get("credentialMasks"):
         uses["app.json credentialMasks"] = 3
+    if permissions.get("webhookSource") is True:
+        uses["app.json permissions.webhookSource"] = 8
     for dirpath, dirnames, filenames in os.walk(tree):
         dirnames[:] = sorted(d for d in dirnames if d not in _UNSCANNED_DIRS)
         for filename in sorted(filenames):
