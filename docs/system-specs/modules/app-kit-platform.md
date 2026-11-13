@@ -6769,7 +6769,8 @@ the set of seams a built-in's code needed from core, published generically. Noth
 any of them names an app. `APP_SDK_LEVEL` is one integer on both sides
 (`apps/app_sdk_level.py`, `website/src/app-sdk/sdkLevel.ts`), pinned equal by
 `test/test_app_sdk_level_mirror.py`. Level 2 adds `ctx.lifecycle` (§32b) and the SDK's
-pull-request panel (§18g); level 6 adds the SDK's issue list (§18h). An app reads `ctx.sdk_level` or the SDK export to detect an
+pull-request panel (§18g); level 6 adds the SDK's issue list (§18h); level 7 adds directory
+entries in `credentialMasks` (§37). An app reads `ctx.sdk_level` or the SDK export to detect an
 older host and degrade, instead of failing on a missing attribute.
 
 **Structural routes.** `RouteRegistry` reads each item a `routes` hook returns through
@@ -7755,6 +7756,36 @@ the app's: `meetings` declaring `edits` gets nothing back for
 spawn already established for the code it executes, and only that source's manifest is
 read, so an installed app holding a built-in's name never gets back what the built-in
 declared.
+
+**Directory entries (seam level 7).** An entry of one name ending in `/` (`"state/"`)
+names a DIRECTORY, masked whole, so every file in it is covered, including the temp a
+writer stages beside its target and renames over it. A file entry cannot cover that temp,
+and a rename over a masked file detaches its mask from every live session (the residual
+`security.md` records), so an app that rewrites a credential by rename keeps it in a
+declared directory; that is the shape Notes' own core state directory has.
+`credential_masks.is_directory_entry` and `entry_path` read the grammar; the leaf carries
+no `/` and `declared_crew_dir_leaves` lists the directory ones. A deeper directory entry
+(`a/b/`) is refused, so the one directory to create always sits directly in `data/`, and
+an entry at or beneath a directory entry is refused (`_overlap_error`; at runtime
+`valid_entries` drops the covered one and keeps the directory). Before each Linux spawn
+`sandbox_staging._materialize_declared_mask_dirs` creates every absent declared directory
+(0700) at its `data/` spelling, inside an `apps/<name>/data` that is already a real
+directory (install and update create it with `app_data_dir`). It never creates
+`apps/<name>` or `data/` itself: the lifecycle moves `data/` aside and back by rename, and a
+`data/` made while it is away would turn the move back into a move into it (a keep-data
+uninstall restores with `shutil.move` once the app tree is gone). A link at any component
+from the data home down refuses the spawn, no `data/` directory leaves nothing to create,
+and the directory is noted as a required mask target. The namespace launcher skips an absent directory, so without this a directory
+the backend made after an agent spawned would be in that agent's view. The
+alias pass refuses a non-directory at a directory entry and still refuses a directory at a
+file entry. The backend gets a directory entry back while it is absent or a real directory
+(`_liftable_declared_dir`). The hard-link pass judges regular files at the declared names
+only, so the files inside a declared directory get what a core `HIDDEN` directory's files
+get: nothing outside the backend can name them. The tool gate needs no change: a
+directory leaf in `security._CREW_SECRET_LEAVES` already fences what is under it. An older
+host's grammar refuses the `/` ending (an empty segment), so it refuses to install such a
+manifest rather than run the app with the directory unmasked; `scripts/adoption_pin.py`
+reports a directory entry as a level-7 use.
 
 **Residual.** The installed tree is sandbox-writable, so a mask is as strong as the
 manifest that declares it: an agent that rewrites an installed app's `app.json` drops

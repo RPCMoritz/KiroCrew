@@ -1720,7 +1720,8 @@ adds the manifest's `credentialMasks` (see
 notes (`/api/notifications/own` and the dashboard's `useAppNotifications()`, see
 [Backend Environment Variables](#backend-environment-variables)), level 5 adds
 [`ctx.app_token()` and `ctx.gateway_origin()`](#app-token-ctxapp_token), and level 6
-adds the dashboard's [issue list](#issue-list) (`useIssues`, `IssueList`, `IssueCard`); each level
+adds the dashboard's [issue list](#issue-list) (`useIssues`, `IssueList`, `IssueCard`), and level 7
+adds directory entries in `credentialMasks` (`"state/"`); each level
 includes every level below it. Read it
 with `getattr(ctx, "sdk_level", 0)`. When it is lower than your app needs, call
 `ctx.health.mark_degraded(...)` with the consequence and keep serving what you can.
