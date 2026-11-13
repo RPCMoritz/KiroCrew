@@ -29,6 +29,7 @@ from kiro_crew.agent import (
 from kiro_crew.agent_discovery import _read_agent_spec
 from kiro_crew.dashboard.handlers.hooks_webhook_intake import _json_object
 from kiro_crew.dashboard.state import DashboardState
+from kiro_crew.shell_audit_log import platform_spec_hooks
 from kiro_crew.validation import sanitize_string
 
 logger = logging.getLogger("kiro_crew.dashboard.handlers.hooks")
@@ -453,6 +454,10 @@ async def api_kiro_hooks(request: web.Request) -> web.Response:
         bundled = raw.get("hooks", {}) if isinstance(raw, dict) else {}
     except (OSError, ValueError):
         bundled = {}
+    # Compare against the form the spec build wrote, not the raw file: on
+    # Windows the bundled audit hook is rewritten for ``cmd /c``, and the raw
+    # POSIX command would tag Crew's own hook as a user one.
+    bundled = platform_spec_hooks(bundled) if isinstance(bundled, dict) else {}
 
     def _hook_row_key(event: str, entry: object) -> tuple[str, str, str] | None:
         """``(event, command, matcher)`` for one hook row, or ``None`` to skip it.
