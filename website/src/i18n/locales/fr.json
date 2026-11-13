@@ -6730,6 +6730,8 @@
         "user_session_reach_read": "Tes chats peuvent lire ces sessions.",
         "user_session_reach_send": "Tes chats peuvent envoyer des messages à ces sessions. Chaque message indique quel chat l'a envoyé.",
         "user_session_reach_note": "Seulement les chats que tu as ouverts toi-même. Les chats incognito, temporaires, planifiés et liés à un canal ne le peuvent pas, et aucun chat ne peut arrêter ni fermer ces sessions.",
+        "host_api_heading": "L’application peut aussi appeler ces points de terminaison de {{productName}}",
+        "host_api_note": "Son manifeste les déclare dans permissions.api.",
         "session_approval_desc": "Envoyer des messages ou choisir des options de réponse dans tes chats, approuver ou refuser les demandes d'outils et changer le mode d'approbation d'un chat.",
         "session_approval_member_threads": "Cela inclut aussi les chats de tes Bots. L'application peut envoyer des messages à tes Bots en ton nom.",
         "session_approval_modes": "Modes d'approbation du chat qu'elle peut définir",

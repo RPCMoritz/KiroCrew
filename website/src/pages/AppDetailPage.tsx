@@ -730,6 +730,7 @@ export default function AppDetailPage() {
         memberThreads: app.manifest?.permissions?.memberThreads === true,
         workerAutoApprove: app.manifest?.permissions?.workerAutoApprove === true,
         reachableByUserSessions: app.manifest?.permissions?.reachableByUserSessions,
+        api: app.manifest?.permissions?.api,
         retryInstalls: true,
         // The Update buttons funnel here too, over an app that is already there.
         replacesInstalled: app.installed === true,
@@ -868,6 +869,7 @@ export default function AppDetailPage() {
           memberThreads: app.manifest?.permissions?.memberThreads === true,
           workerAutoApprove: app.manifest?.permissions?.workerAutoApprove === true,
           reachableByUserSessions: app.manifest?.permissions?.reachableByUserSessions,
+          api: app.manifest?.permissions?.api,
         })
       } else if (action === 'enable' && isSessionApprovalConsentRequiredError(e)) {
         // The grant changed under the dialog (an update added a scope it did not

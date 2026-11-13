@@ -6330,6 +6330,8 @@
         "user_session_reach_read": "내 채팅이 해당 세션을 읽을 수 있습니다.",
         "user_session_reach_send": "내 채팅이 해당 세션에 메시지를 보낼 수 있습니다. 각 메시지에는 보낸 채팅이 표시됩니다.",
         "user_session_reach_note": "내가 직접 연 채팅만 해당됩니다. 시크릿, 임시, 예약 실행, 채널에 연결된 채팅은 할 수 없으며, 어떤 채팅도 해당 세션을 중지하거나 닫을 수 없습니다.",
+        "host_api_heading": "이 앱은 다음 {{productName}} 엔드포인트도 호출할 수 있습니다",
+        "host_api_note": "앱 매니페스트의 permissions.api에 선언되어 있습니다.",
         "session_approval_desc": "내 채팅에 메시지를 보내거나 답변 옵션을 선택하고, 도구 요청을 승인 또는 거부하며 채팅의 승인 모드를 전환하는 것.",
         "session_approval_member_threads": "Bot의 채팅도 포함됩니다. 이 앱은 사용자 이름으로 Bot에 메시지를 보낼 수 있습니다.",
         "session_approval_modes": "설정할 수 있는 채팅 승인 모드",
