@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import shutil
 from collections.abc import Awaitable, Callable
 from datetime import datetime, timedelta, timezone
@@ -368,7 +369,43 @@ def _record_eligible(name: str) -> bool:
         # copy may be the only one a killed swap preserved.
         logger.warning("Adoption of %s skipped: its data is in two places", name)
         return False
-    return not _temp_data_name_obstruction(tmp_data)
+    if _temp_data_name_obstruction(tmp_data):
+        return False
+    return _nothing_beside_the_manifest(name, path)
+
+
+def _nothing_beside_the_manifest(name: str, path: Path) -> bool:
+    """Whether the swap would retire only what the gateway itself keeps in *path*.
+
+    The swap carries ``data/`` and ``.app_secret`` and rewrites the record and the
+    manifest copy; the approved-grants file left from before the protected store
+    is never read again. Anything else at the root is the app's or the operator's,
+    and the swap would delete it with the old tree, so the record keeps running
+    the built-in until that state is in ``data/``. Blocking.
+    """
+    from kiro_crew.apps.manager import (
+        APP_MANIFEST_FILENAME,
+        APPROVED_GRANTS_FILENAME,
+        INSTALLED_META_FILENAME,
+    )
+
+    kept = {INSTALLED_META_FILENAME, APP_MANIFEST_FILENAME, APPROVED_GRANTS_FILENAME}
+    kept |= {"data", ".app_secret"}
+    try:
+        with os.scandir(path) as entries:
+            beside = sorted(entry.name for entry in entries if entry.name not in kept)
+    except OSError:
+        logger.warning("Adoption of %s skipped: its directory cannot be listed", name)
+        return False
+    if beside:
+        logger.warning(
+            "Adoption of %s skipped: the swap would delete %s beside app.json; "
+            "the built-in keeps running until that is in data/",
+            name,
+            ", ".join(beside[:5]),
+        )
+        return False
+    return True
 
 
 def _record_matches_pin(name: str, pin: AdoptionPin) -> bool:

@@ -6997,10 +6997,15 @@ is pinned.** Everything else in the record's directory is retired with the old
 tree, and the swap runs at a start before any route registers, so a built-in that
 kept a file beside `app.json` copies it into `data/` itself, from a startup hook
 that runs whether or not the app is enabled, in a release before its pin row is
-added; core grows no per-app carry list. Nothing at the swap enforces that order:
-a user who never starts that release loses the file, so the app's pin row lands
-with a refusal or carry at the swap for it. Research Lab's campaigns database is
-the worked case (knowledge.md § 7); its test fails while the app is pinned.
+added; core grows no per-app carry list. The swap refuses rather than carries:
+APPLY skips a record whose directory holds anything at its root but the
+gateway's own entries (`installed.json`, the `app.json` copy, `.app_secret`,
+`data/`, and the `approved-grants.json` the protected store imported once and
+never reads again), logging the names it found
+(`builtin_adoption_apply._nothing_beside_the_manifest`, part of E2), so the
+record keeps running the built-in, whose startup hook moves the file, and the
+next start adopts. A user who never started the release carrying that hook loses
+nothing. Research Lab's campaigns database is the worked case (knowledge.md § 7).
 
 **Pins.** `apps/adoption-pins.json` (packaged; each row is the output of
 `scripts/adoption_pin.py compute`, re-checked with `adoption_pin.py verify`, and the
@@ -7176,8 +7181,9 @@ unambiguous state: one retired tree, data in one place); finalize when a
 record goes in the sweep after the listener serves, see "What a killed update
 leaves"); a record whose data is in two
 places (`data/` beside a moved-aside `.<name>-data-tmp`) is skipped, since the
-update refuses that state (see "What a killed update leaves"); else the
-staged artifact is
+update refuses that state (see "What a killed update leaves"); so is a record
+with anything beside `app.json` the swap would retire (see "What the swap keeps
+is `data/`" above), while the ledger keeps its state; else the staged artifact is
 read from the location the pin derives (the ledger names only its kind, and a link
 or junction anywhere below the data home makes it `not_staged`), copied into a
 private temp dir with every file opened without following a link

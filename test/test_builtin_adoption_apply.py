@@ -840,6 +840,45 @@ async def test_data_in_two_places_is_never_adopted(world):
     assert (dest / "data" / "store.txt").read_text(encoding="utf-8") == "kept"
 
 
+async def test_a_file_beside_the_manifest_is_never_retired_by_the_swap(world, caplog):
+    """The swap keeps only ``data/``, so state beside ``app.json`` holds the built-in."""
+    await _stage()
+    dest = manager.app_dir(NAME)
+    (dest / "state.db").write_bytes(b"rows")
+    with caplog.at_level(logging.WARNING, logger="kiro_crew.apps.builtin_adoption"):
+        assert await _boot() == {}
+    assert manager.builtin_owns_installed(NAME)
+    assert (dest / "state.db").read_bytes() == b"rows"
+    assert any("state.db beside app.json" in r.getMessage() for r in caplog.records)
+    # Once the built-in keeps it in data/, the next start adopts and carries it.
+    (dest / "state.db").replace(dest / "data" / "state.db")
+    assert await _boot() == {NAME: "applied"}
+    assert (dest / "data" / "state.db").read_bytes() == b"rows"
+
+
+async def test_a_directory_beside_the_manifest_holds_the_built_in_too(world):
+    await _stage()
+    dest = manager.app_dir(NAME)
+    (dest / "cache").mkdir()
+    (dest / "cache" / "entry").write_text("kept", encoding="utf-8")
+    assert await _boot() == {}
+    assert (dest / "cache" / "entry").read_text(encoding="utf-8") == "kept"
+
+
+def test_the_gateway_s_own_files_do_not_hold_the_swap(world):
+    """The record, the manifest copy, the secret, ``data/`` and the imported grants file."""
+    dest = manager.app_dir(NAME)
+    (dest / manager.APPROVED_GRANTS_FILENAME).write_text("{}", encoding="utf-8")
+    assert sorted(p.name for p in dest.iterdir()) == [
+        ".app_secret",
+        "app.json",
+        manager.APPROVED_GRANTS_FILENAME,
+        "data",
+        "installed.json",
+    ]
+    assert apply_mod._record_eligible(NAME) is True
+
+
 # --------------------------------------------------------------------------- #
 # Rows 5, 12 and 16: uninstall sticks, shadowing apps, idempotence
 # --------------------------------------------------------------------------- #
