@@ -14,8 +14,11 @@ directory and every writer/reader below resolves to the same home with no patchi
 
 from __future__ import annotations
 
+import ast
+import inspect
 import json
 import os
+import textwrap
 import threading
 from pathlib import Path
 
@@ -89,6 +92,65 @@ def test_a_file_with_no_copy_is_served_as_written_until_the_gateway_saves_it(
     # After the gateway's save a later in-sandbox rewrite is overridden by its copy.
     path.write_bytes(_config(sandbox="off", model="tampered"))
     assert lp.reconcile("config.json", path.read_bytes()) == _config(sandbox="auto")
+
+
+def test_start_adopts_a_file_with_no_copy_once(monkeypatch) -> None:
+    """The start endorses a copy-less file as written; a later start never re-adopts."""
+    from kiro_crew.slack.gateway_runtime import service_boot
+
+    run_src = ast.unparse(ast.parse(textwrap.dedent(inspect.getsource(service_boot.run))))
+    adopt = "await asyncio.to_thread(loosening_provenance.adopt_unendorsed)"
+    # Awaited off-loop once the previous run's sessions are swept, before this run's start.
+    assert adopt in run_src
+    swept = run_src.index("cleanup_orphaned_sessions, narrow_with_leaders=False")
+    assert swept < run_src.index(adopt) < run_src.index("warm_backend")
+    monkeypatch.setattr(lp, "enforcement_active", lambda: True)
+    path = config_dir() / "config.json"
+    path.write_bytes(_config(sandbox="auto"))
+    lp.adopt_unendorsed()
+    assert lp._endorsed_path("config.json").read_bytes() == _config(sandbox="auto")
+    path.write_bytes(_config(sandbox="off"))
+    assert [entry["leaf"] for entry in lp.pending_changes()] == ["config.json"]
+    assert lp.reconcile("config.json", path.read_bytes()) == _config(sandbox="auto")
+    lp.adopt_unendorsed()
+    assert lp._endorsed_path("config.json").read_bytes() == _config(sandbox="auto")
+    assert [entry["leaf"] for entry in lp.pending_changes()] == ["config.json"]
+
+
+@pytest.mark.parametrize(
+    "leaf, content",
+    [
+        ("denied_commands.json", b"not json"),
+        ("computer_use.json", b"[1, 2]"),
+        ("config.json", b"\xef\xbb\xbf" + _config(sandbox="auto")),
+        ("config.local.json", _config(sandbox="auto").replace(b"\n", b"\r\n")),
+        ("config.local.json", None),
+    ],
+    ids=["not-json", "not-an-object", "byte-order-mark", "crlf", "missing"],
+)
+def test_start_adopts_only_a_json_object_stored_as_kiro_crew_writes_it(
+    monkeypatch, leaf, content
+) -> None:
+    """A malformed file would block Apply; a BOM or CR never equals the loaders' read."""
+    monkeypatch.setattr(lp, "enforcement_active", lambda: True)
+    path = config_dir() / leaf
+    path.unlink(missing_ok=True)
+    if content is not None:
+        path.write_bytes(content)
+    lp.adopt_unendorsed()
+    assert not os.path.lexists(lp._endorsed_path(leaf))
+
+
+@pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="needs FIFOs")
+def test_start_does_not_adopt_or_block_on_a_leaf_pointed_at_a_fifo(monkeypatch) -> None:
+    monkeypatch.setattr(lp, "enforcement_active", lambda: True)
+    _special("fifo", config_dir() / "computer_use.json")
+    # A blocked read would hang the test; the thread turns that into a named failure.
+    adopter = threading.Thread(target=lp.adopt_unendorsed, daemon=True)
+    adopter.start()
+    adopter.join(60)
+    assert not adopter.is_alive(), "start-time adoption blocked on a FIFO"
+    assert not os.path.lexists(lp._endorsed_path("computer_use.json"))
 
 
 def test_scope_decision_uses_host_facts_not_the_file(monkeypatch) -> None:
