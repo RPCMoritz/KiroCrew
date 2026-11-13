@@ -120,6 +120,13 @@ nothing. A bound item with no seed is visible in your own ledger and you can see
 it next cycle; an unbound running worker is neither visible nor recoverable.
 
 """,
+    "resource_wave": """**`resource_status` decides the wave.** Call it before you stand up several
+worker sessions at once. On `ample`, dispatch every ready, independent item. On
+`tight`, `critical` or `unknown` (a reading that failed), queue the rest and say
+so. Carry no number of your own: a bound the user set is the goal's
+`concurrency_cap`.
+
+""",
     "patrol_watch": """When a `session_create` or `bind` reply's `patrol=` is
 `armed` or `existing (active-work-ledger)`, the gateway already runs your
 patrol: arm nothing. Otherwise arm a loop on your own session with
@@ -265,6 +272,7 @@ call at a time, only to bind an existing session. The order is not a preference:
     ("dispatch_bind", _LEDGER_CONDUCTOR_RULES["dispatch_bind"]),
     ("dispatch_seed", _LEDGER_CONDUCTOR_RULES["dispatch_seed"]),
     ("bind_before_seed", _LEDGER_CONDUCTOR_RULES["bind_before_seed"]),
+    ("resource_wave", _LEDGER_CONDUCTOR_RULES["resource_wave"]),
     (
         "which_agent",
         """### Which agent
@@ -332,13 +340,13 @@ refused reset changes nothing: carry on.
     ),
     (
         "spend_bounded",
-        """**Rounds are not gated, but spend is bounded.** Count from the ledger. With no
-bound from the user, a goal holds at most 6 ledger items OPEN at once; the
-ledger enforces it: a `create` past it is refused `goal_concurrency_cap_reached`.
-That is about how much runs in parallel, not about the total: wait for an item
-to land, and never ask to raise it. A bound the user set calls
-`work_ledger_record` `action=goal` `concurrency_cap=<N>`. The goal's total has
-no cap: `work_ledger_read` returns it as `goal_items_used`.
+        """**Rounds are not gated, but spend is bounded.** Count from the ledger.
+`resource_status` decides the wave; a bound the user set is `concurrency_cap`
+(`work_ledger_record` `action=goal` `concurrency_cap=<N>`), and the ledger
+enforces it: a `create` past it is refused `goal_concurrency_cap_reached`. That
+is about how much runs in parallel, not about the total: wait for an item to
+land, and never ask to raise it. The goal's total has no cap:
+`work_ledger_read` returns it as `goal_items_used`.
 When two rounds in a row land with no item accepted, tell the user what failed,
 as a statement, then narrow to the failing items and re-plan once. Only after a
 third such round dispatch nothing new and ask the user. Pause, do not stop the
