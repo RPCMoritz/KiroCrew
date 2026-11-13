@@ -32,6 +32,7 @@ from kiro_crew.slack.format import (
     OPTIONS_SEVERAL_INPUT,
     is_options_actions_block,
 )
+from kiro_crew.slack.handler import APPROVAL_AUTO, APPROVAL_INTERACTIVE
 from kiro_crew.slack.outbound import (
     PostedOptions,
     claim_options_answer,
@@ -434,6 +435,60 @@ class TestActionRouting:
         context = turns.await_args.kwargs["action_context"]
         embedded = context.split("[Action button clicked: ", 1)[1].rsplit("]\n", 1)[0]
         assert embedded == body[: ix._ACTION_PAYLOAD_CAP] + "… [truncated]"
+
+
+# ---------------------------------------------------------------------------
+# A button-started turn uses the gateway's resolved approval mode
+# ---------------------------------------------------------------------------
+
+
+class TestButtonTurnApprovalMode:
+    """A click resolves its approval mode exactly as a typed message does."""
+
+    @pytest.fixture
+    def mode(self, orch: MagicMock, monkeypatch: pytest.MonkeyPatch) -> Any:
+        monkeypatch.setattr("kiro_crew.slack.events_queue.is_yolo_mode", lambda: False)
+        orch._approval_mode = None
+
+        def _set(value: str) -> None:
+            orch._cfg.agent.approval_mode = value
+
+        return _set
+
+    async def _single(self, orch: MagicMock) -> None:
+        payload, action = _click(["A", "B"], 1)
+        await ix._handle_options(payload, action, "C1", "m1")
+
+    async def _action(self, orch: MagicMock) -> None:
+        action = {"action_id": "btn_go", "value": 'action::{"go": 1}', "text": {"text": "Go"}}
+        payload, _ = _click(["A"], 0)
+        await ix._handle_options(payload, action, "C1", "m1")
+
+    async def _several(self, orch: MagicMock) -> None:
+        await _submit_several(orch, ["A", "B"], [0, 1])
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("path", ["_single", "_action", "_several"])
+    @pytest.mark.parametrize(
+        ("configured", "expected"),
+        [("auto", APPROVAL_AUTO), ("interactive", APPROVAL_INTERACTIVE)],
+    )
+    async def test_the_turn_follows_the_configured_mode(
+        self,
+        orch: MagicMock,
+        turns: AsyncMock,
+        audit: MagicMock,
+        forget: MagicMock,
+        mode: Any,
+        path: str,
+        configured: str,
+        expected: str,
+    ) -> None:
+        mode(configured)
+        await getattr(self, path)(orch)
+        await _join(orch)
+        turns.assert_awaited_once()
+        assert turns.await_args.kwargs["approval_mode"] == expected
 
 
 # ---------------------------------------------------------------------------

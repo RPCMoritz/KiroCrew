@@ -59,6 +59,7 @@ class FakeOrch:
         cfg = KiroCrewConfig()
         cfg.slack.forward_to_agent_callback = callback
         self._cfg = cfg
+        self._approval_mode = None
         self.slack = FakeSlackClient()
         self._handler_tasks: set = set()
         self.sessions = MagicMock()
@@ -632,6 +633,35 @@ class TestHandleShortcutSubmission:
         assert channel == "D_FAKE_DM"
         assert "Original msg" in text
         assert "please review" in text
+
+    @pytest.mark.asyncio
+    async def test_the_forwarded_turn_follows_the_configured_mode(self, orch, monkeypatch):
+        from kiro_crew.slack.handler import APPROVAL_AUTO
+
+        monkeypatch.setattr("kiro_crew.slack.events_queue.is_yolo_mode", lambda: False)
+        orch._cfg.agent.approval_mode = "auto"
+        set_owner_id("U_OWNER")
+        set_allowed_users({"U_OWNER"})
+        turn = AsyncMock()
+        meta = {"channel": "C_ORIG", "ts": "999.888", "user": "U_SENDER", "text": "m"}
+        payload = {
+            "user": {"id": "U_OWNER"},
+            "team": {"id": "T_TEAM"},
+            "view": {
+                "callback_id": "send_to_kirocrew",
+                "private_metadata": json.dumps(meta),
+                "state": {"values": {}},
+                "blocks": [],
+            },
+        }
+        with patch("kiro_crew.slack.interactions._orch", orch), patch(
+            "kiro_crew.slack.interactions.handle_message", turn
+        ):
+            await _handle_shortcut_submission(payload)
+            tasks = list(orch._handler_tasks)
+            assert tasks
+            await asyncio.wait_for(asyncio.gather(*tasks), timeout=5)
+        assert turn.await_args.kwargs["approval_mode"] == APPROVAL_AUTO
 
     @pytest.mark.asyncio
     async def test_rejects_unauthorized_user(self, orch):
