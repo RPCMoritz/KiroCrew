@@ -20,7 +20,7 @@ from kiro_crew.slack.interactions import (
     init,
     register_view_handler,
 )
-from kiro_crew.testing.wait import async_wait_until
+from kiro_crew.testing.wait import async_wait_until, await_until
 
 
 @dataclass
@@ -635,10 +635,9 @@ class TestHandleShortcutSubmission:
         assert "please review" in text
 
     @pytest.mark.asyncio
-    async def test_the_forwarded_turn_follows_the_configured_mode(self, orch, monkeypatch):
+    async def test_the_forwarded_turn_follows_the_configured_mode(self, orch):
         from kiro_crew.slack.handler import APPROVAL_AUTO
 
-        monkeypatch.setattr("kiro_crew.slack.events_queue.is_yolo_mode", lambda: False)
         orch._cfg.agent.approval_mode = "auto"
         set_owner_id("U_OWNER")
         set_allowed_users({"U_OWNER"})
@@ -660,7 +659,7 @@ class TestHandleShortcutSubmission:
             await _handle_shortcut_submission(payload)
             tasks = list(orch._handler_tasks)
             assert tasks
-            await asyncio.wait_for(asyncio.gather(*tasks), timeout=5)
+            await await_until(asyncio.gather(*tasks), what="the forwarded turn")
         assert turn.await_args.kwargs["approval_mode"] == APPROVAL_AUTO
 
     @pytest.mark.asyncio

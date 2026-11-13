@@ -790,9 +790,7 @@ class TestReviewReviseSubmit:
         orch: MagicMock,
         audit: MagicMock,
         turns: AsyncMock,
-        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        monkeypatch.setattr("kiro_crew.slack.events_queue.is_yolo_mode", lambda: False)
         orch._approval_mode = None
         orch._cfg.agent.approval_mode = "auto"
         sh._review_drafts_set(DRAFT_KEY, "the first draft", REQUESTER)

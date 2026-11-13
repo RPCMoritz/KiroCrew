@@ -32,7 +32,7 @@ from kiro_crew.messaging.identity import channel_inbound_permitted
 from kiro_crew.security import redact_credentials, redact_exfiltration_urls
 from kiro_crew.sel import sel
 from kiro_crew.slack.channel_policy import channel_refusal
-from kiro_crew.slack.events_queue import _resolve_approval_mode
+from kiro_crew.slack.events_queue import _configured_approval_mode
 from kiro_crew.slack.format import (
     OPTIONS_ACTION_PREFIX,
     OPTIONS_SEVERAL_BLOCK,
@@ -221,7 +221,7 @@ async def _route_action_to_session(
             new_ts,
             user_id,
             team_id=team_id,
-            approval_mode=_resolve_approval_mode(_orch),
+            approval_mode=_configured_approval_mode(_orch),
             context_builder=_orch.ctx_builder,
             cron_service=_orch.cron_svc,
             conversation_log=_orch.conv_log,
@@ -708,7 +708,7 @@ async def _answer_options(
             new_ts,
             user_id,
             team_id=team_id,
-            approval_mode=_resolve_approval_mode(_orch),
+            approval_mode=_configured_approval_mode(_orch),
             context_builder=_orch.ctx_builder,
             cron_service=_orch.cron_svc,
             conversation_log=_orch.conv_log,

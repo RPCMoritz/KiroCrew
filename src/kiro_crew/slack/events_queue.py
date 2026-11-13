@@ -541,6 +541,16 @@ def _resolve_approval_mode(orch: "GatewayOrchestrator") -> str:
     # paths then honor the runtime toggle consistently.
     if is_yolo_mode():
         return APPROVAL_AUTO
+    return _configured_approval_mode(orch)
+
+
+def _configured_approval_mode(orch: "GatewayOrchestrator") -> str:
+    """The CLI --approval flag, else config, normalized; runtime YOLO is not folded in.
+
+    For a turn started on the native path by a click or modal: the permission
+    ladder checks live YOLO per request, so a timed YOLO that ends mid-turn
+    stops auto-approving there instead of riding a mode captured at turn start.
+    """
     mode = orch._approval_mode or orch._cfg.agent.approval_mode
     return APPROVAL_AUTO if mode == APPROVAL_AUTO else APPROVAL_INTERACTIVE
 

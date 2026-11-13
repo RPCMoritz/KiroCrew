@@ -446,8 +446,7 @@ class TestButtonTurnApprovalMode:
     """A click resolves its approval mode exactly as a typed message does."""
 
     @pytest.fixture
-    def mode(self, orch: MagicMock, monkeypatch: pytest.MonkeyPatch) -> Any:
-        monkeypatch.setattr("kiro_crew.slack.events_queue.is_yolo_mode", lambda: False)
+    def mode(self, orch: MagicMock) -> Any:
         orch._approval_mode = None
 
         def _set(value: str) -> None:
@@ -489,6 +488,23 @@ class TestButtonTurnApprovalMode:
         await _join(orch)
         turns.assert_awaited_once()
         assert turns.await_args.kwargs["approval_mode"] == expected
+
+    @pytest.mark.asyncio
+    async def test_runtime_yolo_is_not_captured_into_the_turn(
+        self,
+        orch: MagicMock,
+        turns: AsyncMock,
+        forget: MagicMock,
+        mode: Any,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """The permission ladder checks live YOLO per request, so a YOLO that ends
+        mid-turn must not survive as an ``auto`` mode fixed at the click."""
+        monkeypatch.setattr("kiro_crew.slack.events.is_yolo_mode", lambda: True)
+        mode("interactive")
+        await self._single(orch)
+        await _join(orch)
+        assert turns.await_args.kwargs["approval_mode"] == APPROVAL_INTERACTIVE
 
 
 # ---------------------------------------------------------------------------
